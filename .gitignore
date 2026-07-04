@@ -44,3 +44,9 @@ next-env.d.ts
 
 # uploaded attachments (local dev storage)
 /public/uploads
+
+# local backups (see docs/modules/module-13-backup-recovery.md — keep off-site, not in Git)
+/backups
+
+# backup job logs
+/logs

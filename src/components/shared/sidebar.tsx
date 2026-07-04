@@ -12,6 +12,7 @@ import {
   User,
   Users,
   History,
+  DatabaseBackup,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const ADMIN_NAV_GROUP = {
   items: [
     { href: "/users", label: "จัดการผู้ใช้งาน", icon: Users },
     { href: "/audit-logs", label: "ประวัติการใช้งานระบบ", icon: History },
+    { href: "/backup", label: "สำรองข้อมูล", icon: DatabaseBackup },
   ],
 };
 
