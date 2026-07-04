@@ -11,6 +11,7 @@ import {
   Building2,
   User,
   Users,
+  History,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,10 @@ const NAV_GROUPS = [
 
 const ADMIN_NAV_GROUP = {
   label: "ระบบ",
-  items: [{ href: "/users", label: "จัดการผู้ใช้งาน", icon: Users }],
+  items: [
+    { href: "/users", label: "จัดการผู้ใช้งาน", icon: Users },
+    { href: "/audit-logs", label: "ประวัติการใช้งานระบบ", icon: History },
+  ],
 };
 
 export function Sidebar({

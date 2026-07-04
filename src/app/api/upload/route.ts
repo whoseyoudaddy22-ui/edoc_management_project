@@ -9,6 +9,9 @@ import {
   getFileExtension,
   isAllowedFileExtension,
 } from "@/lib/upload";
+import { requireAuth } from "@/lib/authorize";
+import { logAction } from "@/lib/audit";
+import { AuditAction } from "@/generated/prisma/enums";
 
 export async function GET(request: NextRequest) {
   const documentId = request.nextUrl.searchParams.get("documentId");
@@ -26,6 +29,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult.error) {
+    return authResult.error;
+  }
+  const { session } = authResult;
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -101,6 +110,18 @@ export async function POST(request: NextRequest) {
           },
         });
       })
+    );
+
+    await Promise.all(
+      created.map((attachment) =>
+        logAction({
+          action: AuditAction.ATTACHMENT_UPLOAD,
+          performedBy: session.user.id,
+          targetType: "Attachment",
+          targetId: attachment.id,
+          changes: { fileName: { from: null, to: attachment.fileName } },
+        })
+      )
     );
 
     return NextResponse.json({ data: created }, { status: 201 });

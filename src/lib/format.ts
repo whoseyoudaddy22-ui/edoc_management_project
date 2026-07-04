@@ -21,3 +21,9 @@ export function formatThaiDate(date: Date | string): string {
   const buddhistYear = d.getFullYear() + 543;
   return `${day} ${month} ${buddhistYear}`;
 }
+
+export function formatThaiDateTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const time = d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  return `${formatThaiDate(d)} ${time} น.`;
+}

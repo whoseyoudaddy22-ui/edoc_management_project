@@ -3,6 +3,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { Role } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authorize";
+import { logAction } from "@/lib/audit";
+import { AuditAction } from "@/generated/prisma/enums";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -22,6 +24,7 @@ export async function PATCH(_request: NextRequest, { params }: RouteParams) {
   if (authResult.error) {
     return authResult.error;
   }
+  const { session } = authResult;
 
   const { id } = await params;
 
@@ -36,6 +39,15 @@ export async function PATCH(_request: NextRequest, { params }: RouteParams) {
     data: { isActive: false },
     select: userListSelect,
   });
+
+  if (existing.isActive) {
+    await logAction({
+      action: AuditAction.USER_DEACTIVATE,
+      performedBy: session.user.id,
+      targetType: "User",
+      targetId: user.id,
+    });
+  }
 
   return NextResponse.json({ data: user });
 }

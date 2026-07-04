@@ -4,6 +4,8 @@ import { Role } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authorize";
 import { updateUserSchema } from "@/lib/validations/user";
+import { logAction, diffFields } from "@/lib/audit";
+import { AuditAction } from "@/generated/prisma/enums";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -23,6 +25,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   if (authResult.error) {
     return authResult.error;
   }
+  const { session } = authResult;
 
   const { id } = await params;
 
@@ -52,6 +55,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: parsed.data,
       select: userListSelect,
     });
+
+    const fieldChanges = diffFields(existing, parsed.data);
+    if (Object.keys(fieldChanges).length > 0) {
+      await logAction({
+        action: AuditAction.USER_UPDATE,
+        performedBy: session.user.id,
+        targetType: "User",
+        targetId: user.id,
+        changes: fieldChanges,
+      });
+    }
 
     return NextResponse.json({ data: user });
   } catch (error) {

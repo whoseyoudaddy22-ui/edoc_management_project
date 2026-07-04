@@ -26,6 +26,15 @@ export function PrintView({
 }) {
   const router = useRouter();
 
+  async function handlePrint() {
+    try {
+      await fetch(`/api/documents/${documentId}/print`, { method: "POST" });
+    } catch (error) {
+      console.error("Failed to log print action", error);
+    }
+    window.print();
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="no-print flex flex-col gap-4">
@@ -37,11 +46,11 @@ export function PrintView({
             <h1 className="text-xl font-semibold text-gray-900">พิมพ์เอกสาร</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => window.print()}>
+            <Button variant="outline" onClick={handlePrint}>
               <Printer className="h-4 w-4" />
               พิมพ์เอกสาร
             </Button>
-            <Button onClick={() => window.print()}>
+            <Button onClick={handlePrint}>
               <Download className="h-4 w-4" />
               Export PDF
             </Button>

@@ -32,6 +32,22 @@ enum DocumentStatus {
   ARCHIVED
 }
 
+enum AuditAction {
+  DOCUMENT_CREATE
+  DOCUMENT_UPDATE
+  DOCUMENT_STATUS_CHANGE
+  DOCUMENT_DELETE
+  ATTACHMENT_UPLOAD
+  ATTACHMENT_DELETE
+  DOCUMENT_PRINT
+  USER_LOGIN
+  USER_LOGOUT
+  USER_LOGIN_FAILED
+  USER_CREATE
+  USER_UPDATE
+  USER_DEACTIVATE
+}
+
 model User {
   id             String   @id @default(cuid())
   email          String   @unique
@@ -90,7 +106,6 @@ model Document {
   createdBy    User         @relation("DocumentCreatedBy", fields: [createdById], references: [id])
   approvedBy   User?        @relation("DocumentApprovedBy", fields: [approvedById], references: [id])
   attachments  Attachment[]
-  auditLogs    AuditLog[]
 
   @@unique([buddhistYear, documentTypeCode, departmentCode, runningNumber])
   @@index([documentTypeCode])
@@ -115,15 +130,18 @@ model Attachment {
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  documentId  String?
-  userId      String
-  action      String
-  description String?
-  metadata    Json?
+  id          String      @id @default(cuid())
+  action      AuditAction
+  performedBy String
+  targetType  String // เช่น "Document", "User", "Attachment"
+  targetId    String
+  changes     Json? // { field: { from: ..., to: ... } } เฉพาะกรณี UPDATE
   ipAddress   String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime    @default(now())
 
-  document Document? @relation(fields: [documentId], references: [id])
-  user     User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [performedBy], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([performedBy])
+  @@index([createdAt])
 }

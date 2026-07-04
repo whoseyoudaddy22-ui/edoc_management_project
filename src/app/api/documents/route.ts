@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Document } from "@/generated/prisma/client";
 import { createDocumentWithAutoNumber } from "@/lib/document-number";
 import { createDocumentSchema } from "@/lib/validations/document";
+import { requireAuth } from "@/lib/authorize";
+import { logAction } from "@/lib/audit";
+import { AuditAction } from "@/generated/prisma/enums";
 
 // การค้นหา/list เอกสารทั้งหมดย้ายไปอยู่ที่ GET /api/documents/search แล้ว
 // (รองรับ multi-criteria search ตาม docs/modules/module-11-metadata-search.md)
 // ไม่ทำ endpoint ค้นหาซ้ำที่นี่ เหลือเฉพาะ POST สำหรับสร้างเอกสาร
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult.error) {
+    return authResult.error;
+  }
+  const { session } = authResult;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -53,7 +63,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const document = await createDocumentWithAutoNumber(
+    const document = await createDocumentWithAutoNumber<Document>(
       departmentCode,
       documentType.code,
       ({ documentNumber, buddhistYear, runningNumber }) => ({
@@ -75,6 +85,13 @@ export async function POST(request: NextRequest) {
         createdBy: { connect: { id: creator.id } },
       })
     );
+
+    await logAction({
+      action: AuditAction.DOCUMENT_CREATE,
+      performedBy: session.user.id,
+      targetType: "Document",
+      targetId: document.id,
+    });
 
     return NextResponse.json({ data: document }, { status: 201 });
   } catch (error) {

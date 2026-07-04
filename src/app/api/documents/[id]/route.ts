@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { updateDocumentSchema } from "@/lib/validations/document";
+import { requireAuth } from "@/lib/authorize";
+import { logAction, diffFields } from "@/lib/audit";
+import { AuditAction } from "@/generated/prisma/enums";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -25,6 +28,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const authResult = await requireAuth();
+  if (authResult.error) {
+    return authResult.error;
+  }
+  const { session } = authResult;
+
   const { id } = await params;
 
   let body: unknown;
@@ -75,6 +84,32 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       },
     });
 
+    const { status: newStatus, ...otherRest } = rest;
+    const fieldChanges = diffFields(existing, otherRest);
+    if (approvedById !== undefined && approvedById !== existing.approvedById) {
+      fieldChanges.approvedById = { from: existing.approvedById, to: approvedById };
+    }
+
+    if (Object.keys(fieldChanges).length > 0) {
+      await logAction({
+        action: AuditAction.DOCUMENT_UPDATE,
+        performedBy: session.user.id,
+        targetType: "Document",
+        targetId: document.id,
+        changes: fieldChanges,
+      });
+    }
+
+    if (newStatus !== undefined && newStatus !== existing.status) {
+      await logAction({
+        action: AuditAction.DOCUMENT_STATUS_CHANGE,
+        performedBy: session.user.id,
+        targetType: "Document",
+        targetId: document.id,
+        changes: { status: { from: existing.status, to: newStatus } },
+      });
+    }
+
     return NextResponse.json({ data: document });
   } catch (error) {
     console.error("Failed to update document", error);
@@ -86,6 +121,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  const authResult = await requireAuth();
+  if (authResult.error) {
+    return authResult.error;
+  }
+  const { session } = authResult;
+
   const { id } = await params;
 
   const existing = await prisma.document.findFirst({
@@ -99,6 +140,13 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   const document = await prisma.document.update({
     where: { id },
     data: { deletedAt: new Date() },
+  });
+
+  await logAction({
+    action: AuditAction.DOCUMENT_DELETE,
+    performedBy: session.user.id,
+    targetType: "Document",
+    targetId: document.id,
   });
 
   return NextResponse.json({ data: document });

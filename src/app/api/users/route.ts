@@ -5,6 +5,8 @@ import { Role } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authorize";
 import { createUserSchema, listUsersQuerySchema } from "@/lib/validations/user";
+import { logAction } from "@/lib/audit";
+import { AuditAction } from "@/generated/prisma/enums";
 
 const userListSelect = {
   id: true,
@@ -76,6 +78,7 @@ export async function POST(request: NextRequest) {
   if (authResult.error) {
     return authResult.error;
   }
+  const { session } = authResult;
 
   let body: unknown;
   try {
@@ -111,6 +114,13 @@ export async function POST(request: NextRequest) {
         departmentCode: input.departmentCode,
       },
       select: userListSelect,
+    });
+
+    await logAction({
+      action: AuditAction.USER_CREATE,
+      performedBy: session.user.id,
+      targetType: "User",
+      targetId: user.id,
     });
 
     return NextResponse.json({ data: user }, { status: 201 });

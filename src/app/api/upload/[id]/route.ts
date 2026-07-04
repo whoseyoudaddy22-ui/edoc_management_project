@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { unlink } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/authorize";
+import { logAction } from "@/lib/audit";
+import { AuditAction } from "@/generated/prisma/enums";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  const authResult = await requireAuth();
+  if (authResult.error) {
+    return authResult.error;
+  }
+  const { session } = authResult;
+
   const { id } = await params;
 
   const attachment = await prisma.attachment.findUnique({ where: { id } });
@@ -20,6 +29,16 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error("Failed to remove attachment file from disk", error);
   }
+
+  // targetId ยังชี้ไปยัง Attachment ที่ถูกลบไปแล้ว (hard delete) จึงเก็บ fileName ไว้ใน changes
+  // เพราะหลังจากนี้จะ join กลับไปหาชื่อไฟล์จากตาราง Attachment ไม่ได้อีก
+  await logAction({
+    action: AuditAction.ATTACHMENT_DELETE,
+    performedBy: session.user.id,
+    targetType: "Attachment",
+    targetId: attachment.id,
+    changes: { fileName: { from: attachment.fileName, to: null } },
+  });
 
   return NextResponse.json({ data: attachment });
 }
