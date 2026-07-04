@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SARABAN // เจ้าหน้าที่สารบรรณ (ค่าเริ่มต้นตาม mockup)
+  ADMIN
+  APPROVER
+}
+
+enum Priority {
+  NORMAL
+  URGENT
+  VERY_URGENT
+  IMMEDIATE
+}
+
+enum DocumentStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  name           String
+  role           Role     @default(SARABAN)
+  departmentCode String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  createdDocuments  Document[]   @relation("DocumentCreatedBy")
+  approvedDocuments Document[]   @relation("DocumentApprovedBy")
+  attachments       Attachment[]
+  auditLogs         AuditLog[]
+}
+
+model DocumentType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  documents Document[]
+}
+
+model Document {
+  id                String         @id @default(cuid())
+  documentNumber    String         @unique
+  departmentCode    String
+  documentTypeId    String
+  documentTypeCode  String
+  buddhistYear      Int
+  runningNumber     Int
+  documentDate      DateTime
+  title             String
+  priority          Priority       @default(NORMAL)
+  recipient         String
+  sender            String
+  referenceNumber   String?
+  content           String
+  status            DocumentStatus @default(DRAFT)
+  signerName        String?
+  signerPosition    String?
+  createdById       String
+  approvedById      String?
+  approvedAt        DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  documentType DocumentType @relation(fields: [documentTypeId], references: [id])
+  createdBy    User         @relation("DocumentCreatedBy", fields: [createdById], references: [id])
+  approvedBy   User?        @relation("DocumentApprovedBy", fields: [approvedById], references: [id])
+  attachments  Attachment[]
+  auditLogs    AuditLog[]
+
+  @@unique([buddhistYear, documentTypeCode, departmentCode, runningNumber])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  documentId   String
+  fileName     String
+  filePath     String
+  fileType     String
+  fileSize     Int
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  document   Document @relation(fields: [documentId], references: [id])
+  uploadedBy User     @relation(fields: [uploadedById], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  documentId  String?
+  userId      String
+  action      String
+  description String?
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  document Document? @relation(fields: [documentId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
+}

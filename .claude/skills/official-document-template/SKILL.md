@@ -1,0 +1,95 @@
+---
+name: official-document-template
+description: Defines the official Thai government-style document layout (หนังสือราชการ) used for on-screen preview and PDF export/print in the Electronic Document Creation and Archiving Management System. Use this skill whenever building or editing the document preview page, the print/export-to-PDF feature, any component that renders a Document's header/body/signature block, or when the words "หนังสือราชการ", "พิมพ์เอกสาร", "แม่แบบเอกสาร", "template", "print", or "export PDF" appear. Also use when choosing fonts, margins, or page size for any document-facing view.
+---
+
+# Official Document Template (แม่แบบหนังสือราชการ)
+
+## Purpose
+
+ทุกจุดของระบบที่แสดงผล "หน้าตาเอกสาร" ให้ผู้ใช้เห็น — ทั้งหน้า preview บนเว็บ และไฟล์ PDF ที่ export/print ออกมา — **ต้องมีโครงสร้าง ระยะขอบ ฟอนต์ และการจัดวางเหมือนกันทุกประการ** ห้ามให้ Claudeออกแบบ layout ใหม่แยกกันในแต่ละหน้า/component
+
+ถ้าต้องแก้ไข layout ให้แก้ spec ในไฟล์นี้ก่อน แล้วค่อยแก้โค้ดทุกจุดที่ใช้ template นี้ให้ตรงกัน
+
+> **หมายเหตุ:** รูปแบบด้านล่างอ้างอิงจากมาตรฐานหนังสือราชการทั่วไป (ตามระเบียบสำนักนายกรัฐมนตรีว่าด้วยงานสารบรรณ) ผสมกับ mockup ที่ออกแบบไว้ในสไลด์นำเสนอโปรเจกต์ หากหน่วยงานจริงมีแบบฟอร์มเฉพาะขององค์กร (เช่น หัวกระดาษ/ครุฑ/ตราหน่วยงาน) ให้ปรับหัวข้อ "ส่วนหัวเอกสาร" ด้านล่างให้ตรงกับของจริงก่อนใช้งาน
+
+## Font Specification (ฟอนต์)
+
+| การใช้งาน | ฟอนต์ | หมายเหตุ |
+|---|---|---|
+| ฟอนต์หลักของเอกสาร (บังคับ) | **TH Sarabun New** | ใช้กับเนื้อหาทั้งหมดของเอกสาร (หัวเรื่อง, เนื้อความ, ลงนาม) ตามมาตรฐานฟอนต์ราชการไทย |
+| ฟอนต์สำรอง (fallback) | **TH Sarabun PSK** | ใช้กรณีเครื่อง/เบราว์เซอร์ผู้ใช้ไม่มี TH Sarabun New ติดตั้งไว้ |
+| CSS font-family (เรียงลำดับ fallback) | `'TH Sarabun New', 'TH Sarabun PSK', sans-serif` | ต้องประกาศลำดับนี้ทุกจุดที่ render เอกสาร ทั้งหน้า preview (CSS) และตอน generate PDF |
+
+### ขนาดฟอนต์มาตรฐาน (ตามระเบียบงานสารบรรณ)
+
+| ส่วนของเอกสาร | ขนาด |
+|---|---|
+| ชื่อหน่วยงาน/หัวกระดาษ | 18pt (ตัวหนา) |
+| เลขที่หนังสือ, วันที่ | 16pt |
+| เรื่อง, เรียน (หัวข้อ) | 16pt (ตัวหนา) |
+| เนื้อความ | 16pt |
+| ผู้ลงนาม/ตำแหน่ง | 16pt |
+
+### การฝังฟอนต์ (สำคัญสำหรับ PDF)
+
+- ฟอนต์ TH Sarabun New/PSK **ไม่ใช่ web-safe font** ต้อง `@font-face` ฝังไฟล์ฟอนต์ (.woff2 หรือ .ttf) ไว้ในโปรเจกต์เอง (เช่น `public/fonts/`) ห้ามพึ่งฟอนต์ที่ติดตั้งในเครื่องผู้ใช้เพียงอย่างเดียว มิฉะนั้น PDF ที่ export จะฟอนต์เพี้ยนเป็น fallback ของระบบ
+- ถ้าใช้ `puppeteer` render PDF จาก HTML ต้องแน่ใจว่า `@font-face` ใน CSS ใช้ path ที่ headless browser เข้าถึงได้จริง (path แบบ absolute หรือ base64 embed)
+- ถ้าใช้ `@react-pdf/renderer` ต้อง `Font.register()` ฟอนต์นี้ก่อนใช้งานเสมอ
+
+## Page Setup (ขนาดกระดาษและระยะขอบ)
+
+| ค่า | กำหนด |
+|---|---|
+| ขนาดกระดาษ | A4 (210mm x 297mm) |
+| ขอบบน | 2.5 ซม. |
+| ขอบล่าง | 2 ซม. |
+| ขอบซ้าย | 3 ซม. (เผื่อเจาะแฟ้ม) |
+| ขอบขวา | 2 ซม. |
+
+## โครงสร้างเอกสาร (Layout Structure)
+
+เรียงจากบนลงล่าง ตาม mockup หน้า "พิมพ์เอกสาร":
+
+1. **ส่วนหัวเอกสาร (Header)** — จัดกึ่งกลาง
+   - โลโก้/ตราหน่วยงาน (ถ้ามี)
+   - ชื่อประเภทเอกสาร เช่น "หนังสือราชการ" (ตัวหนา, ใหญ่กว่าบรรทัดอื่น)
+   - ชื่อหน่วยงาน/องค์กรผู้ออกเอกสาร
+
+2. **แถบข้อมูลอ้างอิง** — จัดชิดซ้าย-ขวาในบรรทัดเดียวกัน (flex justify-between)
+   - ซ้าย: `เลขที่: {documentNumber}`
+   - ขวา: `วันที่: {date แบบไทย เช่น 18 มิ.ย. 2569}`
+   - บรรทัดถัดมา (ถ้ามี): `ประเภท: {documentType}` และ `ความเร่งด่วน: {priority}`
+
+3. **ส่วนผู้รับ**
+   - `เรียน {recipient}`
+
+4. **ส่วนเรื่อง**
+   - `เรื่อง: {title}` (ตัวหนา ขีดเส้นใต้หรือใช้แถบสีอ่อนคั่น ตาม mockup ที่มีแถบสีน้ำเงินด้านซ้ายของบรรทัดนี้)
+
+5. **เนื้อความ (Body)**
+   - ย่อหน้าแรกเว้น indent ตามธรรมเนียมหนังสือราชการ (ประมาณ 2.5 ซม. จากขอบซ้าย)
+   - บรรทัดเว้นบรรทัดปกติ (line-height 1.5)
+
+6. **ส่วนอ้างอิง (ถ้ามี)** — แสดงก่อนเนื้อความ ในรูปแบบ `อ้างถึง {referenceDocumentNumber}`
+
+7. **ส่วนลงนาม (Signature block)** — จัดชิดขวา ด้านล่างเนื้อความ
+   - เว้นที่ว่างสำหรับลายเซ็น
+   - ชื่อผู้ลงนาม
+   - ตำแหน่ง
+
+## กฎการทำให้ Preview กับ PDF ตรงกัน (Preview/PDF Parity)
+
+- ใช้ **CSS class ชุดเดียวกัน** ระหว่างหน้า preview บนเว็บกับ template ที่ใช้ generate PDF (ห้ามเขียนสไตล์แยกกันคนละไฟล์)
+- แนะนำโครงสร้างโค้ด: สร้าง shared component เดียว เช่น `src/components/shared/document-template.tsx` แล้วให้ทั้งหน้า preview (`/documents/[id]`) และ endpoint export PDF (`/api/documents/[id]/pdf`) เรียกใช้ component เดียวกัน (render เป็น HTML string ป้อนให้ puppeteer หรือแปลงเป็น React PDF component จากโครงสร้างเดียวกัน)
+- หน่วยที่ใช้ต้องแปลงจาก `pt`/`ซม.` ให้ตรงกันระหว่างหน้าจอ (px/rem) กับ PDF (mm/pt) — ทดสอบด้วยการ export จริงเทียบกับที่เห็นบนจอทุกครั้งที่แก้ template
+
+## Testing Checklist
+
+ก่อน merge โค้ดที่แก้ template เอกสาร ให้ตรวจสอบว่า:
+
+- [ ] Preview บนเว็บกับ PDF ที่ export ออกมา หน้าตาตรงกัน (เลขที่/วันที่/เรื่อง/เนื้อความ อยู่ตำแหน่งเดียวกัน)
+- [ ] ฟอนต์ไทยแสดงผลถูกต้อง ไม่ fallback เป็นฟอนต์ระบบ ทั้งบนเว็บและใน PDF ที่ export
+- [ ] ทดสอบเนื้อความยาวข้ามหน้า (multi-page) — ตรวจว่าไม่มีข้อความถูกตัดกลางบรรทัด/กลางคำ
+- [ ] ทดสอบกรณีไม่มีข้อมูล optional (เช่น ไม่มีอ้างอิง, ไม่มีโลโก้) — layout ต้องไม่เพี้ยน
+- [ ] ขนาดกระดาษ A4 และระยะขอบตรงตาม spec เมื่อสั่งพิมพ์จริง (ทดสอบ print preview ของเบราว์เซอร์)
