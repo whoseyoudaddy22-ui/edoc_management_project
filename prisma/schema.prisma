@@ -93,6 +93,11 @@ model Document {
   auditLogs    AuditLog[]
 
   @@unique([buddhistYear, documentTypeCode, departmentCode, runningNumber])
+  @@index([documentTypeCode])
+  @@index([status])
+  @@index([createdAt])
+  @@index([departmentCode])
+  @@index([createdById])
 }
 
 model Attachment {

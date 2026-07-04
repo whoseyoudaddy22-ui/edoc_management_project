@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:documents": "tsx prisma/seed-documents.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

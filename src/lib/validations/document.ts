@@ -39,12 +39,34 @@ export const updateDocumentSchema = z
 
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;
 
-export const listDocumentsQuerySchema = z.object({
-  search: z.string().trim().min(1).optional(),
-  status: z.enum(DocumentStatus).optional(),
-  documentTypeId: z.string().min(1).optional(),
+// query parameter แบบ multi-select ส่งมาเป็น comma-separated string เดียว (เช่น ?statuses=DRAFT,PENDING)
+function splitCommaSeparated(value: unknown): string[] | undefined {
+  if (typeof value !== "string" || value.trim().length === 0) return undefined;
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseBooleanFlag(value: unknown): boolean | undefined {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return undefined;
+}
+
+export const documentSearchQuerySchema = z.object({
+  keyword: z.string().trim().min(1).optional(),
+  documentTypeCodes: z.preprocess(splitCommaSeparated, z.array(z.string().min(1)).optional()),
+  statuses: z.preprocess(splitCommaSeparated, z.array(z.enum(DocumentStatus)).optional()),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+  createdByIds: z.preprocess(splitCommaSeparated, z.array(z.string().min(1)).optional()),
+  departmentCodes: z.preprocess(splitCommaSeparated, z.array(z.string().min(1)).optional()),
+  priorities: z.preprocess(splitCommaSeparated, z.array(z.enum(Priority)).optional()),
+  referenceNumber: z.string().trim().min(1).optional(),
+  hasAttachment: z.preprocess(parseBooleanFlag, z.boolean().optional()),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-export type ListDocumentsQuery = z.infer<typeof listDocumentsQuerySchema>;
+export type DocumentSearchQuery = z.infer<typeof documentSearchQuerySchema>;

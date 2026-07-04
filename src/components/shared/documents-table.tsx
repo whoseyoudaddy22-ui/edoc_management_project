@@ -2,26 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Search,
-  Eye,
-  Printer,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  FilePlus,
-} from "lucide-react";
+import { Search, Eye, Printer, Trash2, ChevronLeft, ChevronRight, FilePlus, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge, STATUS_LABEL } from "@/components/shared/status-badge";
+import {
+  AdvancedSearchPanel,
+  EMPTY_ADVANCED_FILTERS,
+  type AdvancedSearchFilters,
+} from "@/components/shared/advanced-search-panel";
+import { PRIORITY_LABELS } from "@/lib/labels";
 import { DocumentStatus } from "@/generated/prisma/enums";
 
 const dateFormatter = new Intl.DateTimeFormat("th-TH", {
@@ -39,15 +31,25 @@ type DocumentRow = {
   documentType: { id: string; name: string };
 };
 
-type DocumentType = { id: string; name: string };
+type DocumentTypeOption = { id: string; name: string; code: string };
+type UserOption = { id: string; name: string };
 
-const STATUS_FILTER_OPTIONS = Object.values(DocumentStatus);
+type Chip = { key: string; label: string; onRemove: () => void };
 
-export function DocumentsTable({ documentTypes }: { documentTypes: DocumentType[] }) {
+export function DocumentsTable({
+  documentTypes,
+  users,
+  departmentCodes,
+}: {
+  documentTypes: DocumentTypeOption[];
+  users: UserOption[];
+  departmentCodes: string[];
+}) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [status, setStatus] = useState<string>("all");
-  const [documentTypeId, setDocumentTypeId] = useState<string>("all");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [filters, setFilters] = useState<AdvancedSearchFilters>(EMPTY_ADVANCED_FILTERS);
+  const [debouncedReferenceNumber, setDebouncedReferenceNumber] = useState("");
   const [page, setPage] = useState(1);
 
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -57,17 +59,27 @@ export function DocumentsTable({ documentTypes }: { documentTypes: DocumentType[
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // ทุกครั้งที่เปลี่ยนเงื่อนไขค้นหา (ขั้นสูงหรือ chip) ให้กลับไปหน้า 1 เสมอ
+  function updateFilters(
+    update: AdvancedSearchFilters | ((prev: AdvancedSearchFilters) => AdvancedSearchFilters)
+  ) {
+    setFilters(update);
+    setPage(1);
+  }
+
+  const documentTypeCodesKey = filters.documentTypeCodes.join(",");
+  const statusesKey = filters.statuses.join(",");
+  const prioritiesKey = filters.priorities.join(",");
+  const createdByIdsKey = filters.createdByIds.join(",");
+  const departmentCodesKey = filters.departmentCodes.join(",");
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedSearch(search.trim());
-      setPage(1);
+      setDebouncedReferenceNumber(filters.referenceNumber.trim());
     }, 400);
     return () => clearTimeout(timeout);
-  }, [search]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [status, documentTypeId]);
+  }, [search, filters.referenceNumber]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -77,12 +89,23 @@ export function DocumentsTable({ documentTypes }: { documentTypes: DocumentType[
       setError(null);
 
       const params = new URLSearchParams({ page: String(page), pageSize: "10" });
-      if (debouncedSearch) params.set("search", debouncedSearch);
-      if (status !== "all") params.set("status", status);
-      if (documentTypeId !== "all") params.set("documentTypeId", documentTypeId);
+      if (debouncedSearch) params.set("keyword", debouncedSearch);
+      if (filters.documentTypeCodes.length)
+        params.set("documentTypeCodes", filters.documentTypeCodes.join(","));
+      if (filters.statuses.length) params.set("statuses", filters.statuses.join(","));
+      if (filters.priorities.length) params.set("priorities", filters.priorities.join(","));
+      if (filters.createdByIds.length)
+        params.set("createdByIds", filters.createdByIds.join(","));
+      if (filters.departmentCodes.length)
+        params.set("departmentCodes", filters.departmentCodes.join(","));
+      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.set("dateTo", filters.dateTo);
+      if (debouncedReferenceNumber) params.set("referenceNumber", debouncedReferenceNumber);
+      if (filters.hasAttachment !== "all")
+        params.set("hasAttachment", filters.hasAttachment === "yes" ? "true" : "false");
 
       try {
-        const response = await fetch(`/api/documents?${params.toString()}`, {
+        const response = await fetch(`/api/documents/search?${params.toString()}`, {
           signal: controller.signal,
         });
         const body = await response.json();
@@ -106,7 +129,19 @@ export function DocumentsTable({ documentTypes }: { documentTypes: DocumentType[
 
     fetchDocuments();
     return () => controller.abort();
-  }, [debouncedSearch, status, documentTypeId, page]);
+  }, [
+    debouncedSearch,
+    debouncedReferenceNumber,
+    documentTypeCodesKey,
+    statusesKey,
+    prioritiesKey,
+    createdByIdsKey,
+    departmentCodesKey,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.hasAttachment,
+    page,
+  ]);
 
   async function handleDelete(id: string, documentNumber: string) {
     if (!window.confirm(`ยืนยันการลบเอกสารเลขที่ ${documentNumber}?`)) return;
@@ -128,6 +163,109 @@ export function DocumentsTable({ documentTypes }: { documentTypes: DocumentType[
     }
   }
 
+  const chips: Chip[] = [];
+
+  if (search.trim()) {
+    chips.push({
+      key: "search",
+      label: `ค้นหา: "${search.trim()}"`,
+      onRemove: () => {
+        setSearch("");
+        setPage(1);
+      },
+    });
+  }
+
+  for (const code of filters.documentTypeCodes) {
+    const name = documentTypes.find((type) => type.code === code)?.name ?? code;
+    chips.push({
+      key: `type-${code}`,
+      label: `ประเภท: ${name}`,
+      onRemove: () =>
+        updateFilters((prev) => ({
+          ...prev,
+          documentTypeCodes: prev.documentTypeCodes.filter((c) => c !== code),
+        })),
+    });
+  }
+
+  for (const status of filters.statuses) {
+    chips.push({
+      key: `status-${status}`,
+      label: `สถานะ: ${STATUS_LABEL[status]}`,
+      onRemove: () =>
+        updateFilters((prev) => ({
+          ...prev,
+          statuses: prev.statuses.filter((s) => s !== status),
+        })),
+    });
+  }
+
+  for (const priority of filters.priorities) {
+    chips.push({
+      key: `priority-${priority}`,
+      label: `ความเร่งด่วน: ${PRIORITY_LABELS[priority]}`,
+      onRemove: () =>
+        updateFilters((prev) => ({
+          ...prev,
+          priorities: prev.priorities.filter((p) => p !== priority),
+        })),
+    });
+  }
+
+  for (const userId of filters.createdByIds) {
+    const name = users.find((user) => user.id === userId)?.name ?? userId;
+    chips.push({
+      key: `creator-${userId}`,
+      label: `ผู้สร้าง: ${name}`,
+      onRemove: () =>
+        updateFilters((prev) => ({
+          ...prev,
+          createdByIds: prev.createdByIds.filter((id) => id !== userId),
+        })),
+    });
+  }
+
+  for (const code of filters.departmentCodes) {
+    chips.push({
+      key: `dept-${code}`,
+      label: `หน่วยงาน: ${code}`,
+      onRemove: () =>
+        updateFilters((prev) => ({
+          ...prev,
+          departmentCodes: prev.departmentCodes.filter((c) => c !== code),
+        })),
+    });
+  }
+
+  if (filters.dateFrom || filters.dateTo) {
+    const fromLabel = filters.dateFrom
+      ? dateFormatter.format(new Date(filters.dateFrom))
+      : "เริ่มต้น";
+    const toLabel = filters.dateTo ? dateFormatter.format(new Date(filters.dateTo)) : "ปัจจุบัน";
+    chips.push({
+      key: "date-range",
+      label: `วันที่: ${fromLabel} - ${toLabel}`,
+      onRemove: () => updateFilters((prev) => ({ ...prev, dateFrom: "", dateTo: "" })),
+    });
+  }
+
+  if (filters.referenceNumber.trim()) {
+    chips.push({
+      key: "reference",
+      label: `อ้างอิง: "${filters.referenceNumber.trim()}"`,
+      onRemove: () => updateFilters((prev) => ({ ...prev, referenceNumber: "" })),
+    });
+  }
+
+  if (filters.hasAttachment !== "all") {
+    chips.push({
+      key: "attachment",
+      label: `ไฟล์แนบ: ${filters.hasAttachment === "yes" ? "มี" : "ไม่มี"}`,
+      onRemove: () => updateFilters((prev) => ({ ...prev, hasAttachment: "all" })),
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -145,52 +283,43 @@ export function DocumentsTable({ documentTypes }: { documentTypes: DocumentType[
               <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="ค้นหาเลขที่เอกสาร หรือ ชื่อเรื่อง"
                 className="pl-9"
               />
             </div>
-
-            <Select value={documentTypeId} onValueChange={(value) => value && setDocumentTypeId(value)}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="ประเภทเอกสาร">
-                  {(value: string | null) =>
-                    value === "all" || !value
-                      ? "ทุกประเภท"
-                      : documentTypes.find((type) => type.id === value)?.name ?? "ทุกประเภท"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ทุกประเภท</SelectItem>
-                {documentTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={status} onValueChange={(value) => value && setStatus(value)}>
-              <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="สถานะ">
-                  {(value: string | null) =>
-                    value === "all" || !value
-                      ? "ทุกสถานะ"
-                      : STATUS_LABEL[value as DocumentStatus]
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ทุกสถานะ</SelectItem>
-                {STATUS_FILTER_OPTIONS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {STATUS_LABEL[value]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
+
+          <AdvancedSearchPanel
+            open={advancedOpen}
+            onOpenChange={setAdvancedOpen}
+            filters={filters}
+            onFiltersChange={updateFilters}
+            documentTypes={documentTypes}
+            users={users}
+            departmentCodes={departmentCodes}
+          />
+
+          {chips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {chips.map((chip) => (
+                <Badge key={chip.key} variant="secondary" className="gap-1 py-1">
+                  {chip.label}
+                  <button
+                    type="button"
+                    onClick={chip.onRemove}
+                    aria-label={`ลบเงื่อนไข ${chip.label}`}
+                    className="rounded-full hover:bg-black/10"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
 
           {error && (
             <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">

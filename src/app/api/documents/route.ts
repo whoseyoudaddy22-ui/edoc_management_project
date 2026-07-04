@@ -1,64 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createDocumentWithAutoNumber } from "@/lib/document-number";
-import {
-  createDocumentSchema,
-  listDocumentsQuerySchema,
-} from "@/lib/validations/document";
+import { createDocumentSchema } from "@/lib/validations/document";
 
-export async function GET(request: NextRequest) {
-  const parsedQuery = listDocumentsQuerySchema.safeParse(
-    Object.fromEntries(request.nextUrl.searchParams)
-  );
-
-  if (!parsedQuery.success) {
-    return NextResponse.json(
-      { error: "พารามิเตอร์ค้นหาไม่ถูกต้อง", issues: parsedQuery.error.flatten() },
-      { status: 400 }
-    );
-  }
-
-  const { search, status, documentTypeId, page, pageSize } = parsedQuery.data;
-
-  const where: Prisma.DocumentWhereInput = {
-    deletedAt: null,
-    ...(status ? { status } : {}),
-    ...(documentTypeId ? { documentTypeId } : {}),
-    ...(search
-      ? {
-          OR: [
-            { documentNumber: { contains: search, mode: "insensitive" } },
-            { title: { contains: search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-  };
-
-  const [documents, total] = await Promise.all([
-    prisma.document.findMany({
-      where,
-      include: {
-        documentType: true,
-        createdBy: { select: { id: true, name: true, email: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.document.count({ where }),
-  ]);
-
-  return NextResponse.json({
-    data: documents,
-    pagination: {
-      page,
-      pageSize,
-      total,
-      totalPages: Math.ceil(total / pageSize),
-    },
-  });
-}
+// การค้นหา/list เอกสารทั้งหมดย้ายไปอยู่ที่ GET /api/documents/search แล้ว
+// (รองรับ multi-criteria search ตาม docs/modules/module-11-metadata-search.md)
+// ไม่ทำ endpoint ค้นหาซ้ำที่นี่ เหลือเฉพาะ POST สำหรับสร้างเอกสาร
 
 export async function POST(request: NextRequest) {
   let body: unknown;
