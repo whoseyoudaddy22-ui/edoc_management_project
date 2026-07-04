@@ -1,19 +1,18 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { DocumentCreateForm } from "@/components/shared/document-create-form";
 
 export default async function CreateDocumentPage() {
-  const [documentTypes, currentUser] = await Promise.all([
+  const [documentTypes, session] = await Promise.all([
     prisma.documentType.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true, code: true },
     }),
-    prisma.user.findFirst({
-      where: { isActive: true },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, departmentCode: true },
-    }),
+    auth(),
   ]);
+
+  const currentUser = session?.user;
 
   if (!currentUser || !currentUser.departmentCode) {
     return (

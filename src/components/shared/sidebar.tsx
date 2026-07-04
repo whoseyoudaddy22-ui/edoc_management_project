@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   FilePlus,
@@ -9,8 +10,11 @@ import {
   UploadCloud,
   Building2,
   User,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ROLE_LABELS } from "@/lib/labels";
+import type { Role } from "@/generated/prisma/enums";
 
 const NAV_GROUPS = [
   {
@@ -27,7 +31,11 @@ const NAV_GROUPS = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  user,
+}: {
+  user: { name: string; role: Role };
+}) {
   const pathname = usePathname();
 
   return (
@@ -77,10 +85,18 @@ export function Sidebar() {
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10">
           <User className="h-4 w-4 text-gray-200" />
         </div>
-        <div className="leading-tight">
-          <p className="text-sm font-medium text-white">เจ้าหน้าที่สารบรรณ</p>
-          <p className="text-xs text-gray-400">ผู้ปฏิบัติงานเอกสาร</p>
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="truncate text-sm font-medium text-white">{user.name}</p>
+          <p className="text-xs text-gray-400">{ROLE_LABELS[user.role]}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          title="ออกจากระบบ"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
     </aside>
   );

@@ -1,19 +1,18 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { UploadForm } from "@/components/shared/upload-form";
 
 export default async function UploadPage() {
-  const [documents, currentUser] = await Promise.all([
+  const [documents, session] = await Promise.all([
     prisma.document.findMany({
       where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
       select: { id: true, documentNumber: true, title: true },
     }),
-    prisma.user.findFirst({
-      where: { isActive: true },
-      orderBy: { createdAt: "asc" },
-      select: { id: true },
-    }),
+    auth(),
   ]);
+
+  const currentUser = session?.user;
 
   if (!currentUser) {
     return (

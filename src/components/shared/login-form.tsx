@@ -1,0 +1,87 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { signIn } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { loginSchema, type LoginInput } from "@/lib/validations/auth";
+
+export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
+  const router = useRouter();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const onSubmit = handleSubmit(async (values) => {
+    setSubmitError(null);
+    const result = await signIn("credentials", {
+      ...values,
+      redirect: false,
+    });
+
+    if (!result || result.error) {
+      setSubmitError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      return;
+    }
+
+    router.push(callbackUrl);
+    router.refresh();
+  });
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="email">
+          อีเมล<span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="email"
+          type="email"
+          autoComplete="email"
+          placeholder="name@organization.go.th"
+          {...register("email")}
+        />
+        {errors.email && (
+          <p className="text-xs text-red-500">{errors.email.message}</p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="password">
+          รหัสผ่าน<span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          {...register("password")}
+        />
+        {errors.password && (
+          <p className="text-xs text-red-500">{errors.password.message}</p>
+        )}
+      </div>
+
+      {submitError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {submitError}
+        </p>
+      )}
+
+      <Button type="submit" disabled={isSubmitting} className="mt-2 bg-blue-600 hover:bg-blue-600/90">
+        {isSubmitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+      </Button>
+    </form>
+  );
+}
