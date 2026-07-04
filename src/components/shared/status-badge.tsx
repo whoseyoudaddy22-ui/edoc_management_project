@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { DocumentStatus } from "@/generated/prisma/enums";
 
-const STATUS_LABEL: Record<DocumentStatus, string> = {
+export const STATUS_LABEL: Record<DocumentStatus, string> = {
   DRAFT: "ฉบับร่าง",
   PENDING: "รอดำเนินการ",
   APPROVED: "อนุมัติแล้ว",
