@@ -23,7 +23,27 @@ export function formatDocumentNumber(params: {
   return `${departmentCode}.${documentTypeCode}/${buddhistYear}-${String(runningNumber).padStart(3, "0")}`;
 }
 
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 15;
+
+function isRetryableTransactionError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code === "P2034" || error.code === "P2002";
+  }
+  // adapter บางเวอร์ชันโยน DriverAdapterError แบบ raw ออกมาตรงๆ โดยไม่ห่อเป็น
+  // PrismaClientKnownRequestError เสมอไป จึงต้องเช็ค message เป็น fallback ด้วย
+  const message = error instanceof Error ? error.message : String(error);
+  return /write conflict|deadlock|serializ/i.test(message);
+}
+
+function backoffDelayMs(attempt: number): number {
+  const base = 20 * 2 ** (attempt - 1);
+  const jitter = Math.random() * base;
+  return Math.min(base + jitter, 1000);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * สร้างเอกสารพร้อมออกเลขที่เอกสารอัตโนมัติแบบ atomic
@@ -68,13 +88,10 @@ export async function createDocumentWithAutoNumber<T>(
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
       );
     } catch (error) {
-      const isRetryable =
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        (error.code === "P2034" || error.code === "P2002");
-
-      if (!isRetryable || attempt === MAX_RETRIES) {
+      if (!isRetryableTransactionError(error) || attempt === MAX_RETRIES) {
         throw error;
       }
+      await sleep(backoffDelayMs(attempt));
     }
   }
 

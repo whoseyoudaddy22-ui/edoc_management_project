@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
-    "db:seed:documents": "tsx prisma/seed-documents.ts"
+    "db:seed:documents": "tsx prisma/seed-documents.ts",
+    "test": "dotenv -e .env.test -- vitest run",
+    "test:watch": "dotenv -e .env.test -- vitest",
+    "test:db:migrate": "dotenv -e .env.test -- prisma migrate deploy",
+    "test:db:seed": "dotenv -e .env.test -- tsx prisma/seed-test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -35,11 +39,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/ui": "^4.1.9",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }
