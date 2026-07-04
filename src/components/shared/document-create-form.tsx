@@ -17,14 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createDocumentSchema } from "@/lib/validations/document";
+import { PRIORITY_LABELS } from "@/lib/labels";
 import { Priority } from "@/generated/prisma/enums";
-
-const PRIORITY_LABELS: Record<Priority, string> = {
-  [Priority.NORMAL]: "ปกติ",
-  [Priority.URGENT]: "ด่วน",
-  [Priority.VERY_URGENT]: "ด่วนมาก",
-  [Priority.IMMEDIATE]: "ด่วนที่สุด",
-};
 
 const documentFormSchema = createDocumentSchema.omit({ createdById: true });
 
