@@ -1,0 +1,20 @@
+node_modules
+.next
+.git
+.claude
+npm-debug.log*
+
+# secrets ไม่ควรอยู่ใน build context/image — inject ผ่าน env_file ตอนรันแทน (ดู docker-compose.yml)
+.env
+.env.local
+.env.test
+.env.production
+
+# ข้อมูลที่ต้อง persist ผ่าน volume เท่านั้น ไม่ใช่ผ่าน image
+public/uploads
+backups
+logs
+
+*.md
+tests
+coverage

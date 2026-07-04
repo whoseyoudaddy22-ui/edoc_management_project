@@ -1,0 +1,64 @@
+# อ้างอิงตาม docs/modules/module-15-deployment.md > ถ้าใช้ Docker
+# รันด้วย: docker compose --env-file .env.production up -d
+# (ต้องมี POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB / AUTH_SECRET ใน .env.production ก่อน)
+
+services:
+  db:
+    image: postgres:16
+    container_name: docs-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # ห้าม publish port 5432 ออกนอกเครื่อง (Security Hardening ใน module-15-deployment.md)
+    # service อื่นในเครือข่าย compose นี้เข้าถึง db ผ่าน hostname "db" ได้อยู่แล้วโดยไม่ต้อง publish
+    # ถ้าต้องต่อจากนอกเครื่องเพื่อดูแลระบบ ให้ทำผ่าน `docker exec` หรือ SSH tunnel แทน
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docs-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      # override DATABASE_URL ใน .env.production (ซึ่งเผื่อไว้สำหรับ deploy แบบไม่ใช้ Docker)
+      # ให้ชี้ไปที่ service "db" ในเครือข่าย compose แทน
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    ports:
+      - "3000:3000"
+    volumes:
+      # bind mount แทน named volume เพื่อให้สคริปต์ backup-files.sh (รันบนเครื่อง host)
+      # อ่านไฟล์ path เดียวกับที่ app เขียนได้โดยตรง
+      - ./public/uploads:/app/public/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # รันครั้งเดียวก่อน "docker compose up -d" ทุกครั้งที่ deploy เวอร์ชันใหม่ (ไม่ auto-run ตอน up ปกติ):
+  #   docker compose --env-file .env.production run --rm migrate
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["tools"]
+
+volumes:
+  pgdata:

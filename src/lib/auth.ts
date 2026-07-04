@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +6,12 @@ import { authConfig } from "@/lib/auth.config";
 import type { JWT } from "next-auth/jwt";
 import { logAction } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
+import { isLoginLocked } from "@/lib/login-rate-limit";
+
+// code นี้ถูกส่งกลับไปที่ query param `code` ตอน redirect (ดู login-form.tsx) จึงต้องไม่ใบ้ข้อมูลอ่อนไหว
+export class AccountLockedError extends CredentialsSignin {
+  code = "account_locked";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -36,6 +42,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             });
           }
           return null;
+        }
+
+        // ป้องกัน brute-force: บล็อกก่อนตรวจรหัสผ่านเลยถ้า login ผิดเกินกำหนดในช่วงเวลาที่กำหนด
+        // (ดู src/lib/login-rate-limit.ts และ docs/modules/module-15-deployment.md > Security Hardening)
+        if (await isLoginLocked(user.id)) {
+          throw new AccountLockedError();
         }
 
         const passwordMatches = await bcrypt.compare(password, user.passwordHash);

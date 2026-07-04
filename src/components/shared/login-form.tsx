@@ -31,7 +31,13 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     });
 
     if (!result || result.error) {
-      setSubmitError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      // "account_locked" ต้องตรงกับ AccountLockedError.code ใน src/lib/auth.ts
+      // (ตัวเลข 15 นาทีต้องตรงกับ LOGIN_LOCKOUT_WINDOW_MINUTES ใน src/lib/login-rate-limit.ts)
+      if (result?.code === "account_locked") {
+        setSubmitError("เข้าสู่ระบบผิดพลาดติดต่อกันหลายครั้งเกินไป กรุณารอ 15 นาทีแล้วลองใหม่อีกครั้ง");
+      } else {
+        setSubmitError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      }
       return;
     }
 
