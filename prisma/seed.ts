@@ -19,6 +19,22 @@ async function main() {
   });
 
   console.log(`Seeded user: ${user.email} (password: saraban1234)`);
+
+  const adminPasswordHash = await bcrypt.hash("admin1234", 10);
+
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@organization.go.th" },
+    update: {},
+    create: {
+      email: "admin@organization.go.th",
+      passwordHash: adminPasswordHash,
+      name: "ผู้ดูแลระบบ",
+      role: Role.ADMIN,
+      departmentCode: "ศรพ",
+    },
+  });
+
+  console.log(`Seeded user: ${admin.email} (password: admin1234)`);
 }
 
 main()
