@@ -11,4 +11,5 @@ export const ROLE_LABELS: Record<Role, string> = {
   [Role.SARABAN]: "เจ้าหน้าที่สารบรรณ",
   [Role.ADMIN]: "ผู้ดูแลระบบ",
   [Role.APPROVER]: "ผู้อนุมัติ",
+  [Role.VIEWER]: "ผู้ใช้งานทั่วไป",
 };

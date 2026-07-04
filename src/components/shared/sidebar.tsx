@@ -10,11 +10,12 @@ import {
   UploadCloud,
   Building2,
   User,
+  Users,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ROLE_LABELS } from "@/lib/labels";
-import type { Role } from "@/generated/prisma/enums";
+import { Role } from "@/generated/prisma/enums";
 
 const NAV_GROUPS = [
   {
@@ -31,12 +32,19 @@ const NAV_GROUPS = [
   },
 ];
 
+const ADMIN_NAV_GROUP = {
+  label: "ระบบ",
+  items: [{ href: "/users", label: "จัดการผู้ใช้งาน", icon: Users }],
+};
+
 export function Sidebar({
   user,
 }: {
   user: { name: string; role: Role };
 }) {
   const pathname = usePathname();
+  const navGroups =
+    user.role === Role.ADMIN ? [...NAV_GROUPS, ADMIN_NAV_GROUP] : NAV_GROUPS;
 
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col bg-[#1e2a4a] text-gray-200">
@@ -51,7 +59,7 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-2">
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.label}>
             <p className="px-3 pb-2 text-xs font-medium tracking-wide text-gray-400 uppercase">
               {group.label}
