@@ -12,7 +12,6 @@ export const createDocumentSchema = z.object({
   content: z.string().min(1, "กรุณาระบุเนื้อหา"),
   signerName: z.string().optional(),
   signerPosition: z.string().optional(),
-  createdById: z.string().min(1, "กรุณาระบุผู้สร้างเอกสาร"),
 });
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;

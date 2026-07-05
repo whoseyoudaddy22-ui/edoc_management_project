@@ -38,14 +38,16 @@ export async function POST(request: NextRequest) {
 
   const input = parsed.data;
 
+  // ผู้สร้างเอกสารต้องเป็นผู้ใช้ที่ login อยู่เท่านั้น (จาก session) ห้ามรับค่านี้จาก client
+  // มิเช่นนั้นผู้ใช้ A จะส่ง id ของผู้ใช้ B มาแอบอ้างเป็นผู้สร้างเอกสารแทนได้ (IDOR)
   const [creator, documentType] = await Promise.all([
-    prisma.user.findUnique({ where: { id: input.createdById } }),
+    prisma.user.findUnique({ where: { id: session.user.id } }),
     prisma.documentType.findUnique({ where: { id: input.documentTypeId } }),
   ]);
 
   if (!creator) {
     return NextResponse.json(
-      { error: "ไม่พบผู้ใช้ที่ระบุ (createdById)" },
+      { error: "ไม่พบผู้ใช้ที่ระบุ" },
       { status: 404 }
     );
   }

@@ -25,5 +25,5 @@ export default async function UploadPage() {
     );
   }
 
-  return <UploadForm documents={documents} currentUserId={currentUser.id} />;
+  return <UploadForm documents={documents} />;
 }

@@ -26,7 +26,5 @@ export default async function CreateDocumentPage() {
     );
   }
 
-  return (
-    <DocumentCreateForm documentTypes={documentTypes} currentUserId={currentUser.id} />
-  );
+  return <DocumentCreateForm documentTypes={documentTypes} />;
 }

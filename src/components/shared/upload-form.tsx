@@ -40,10 +40,8 @@ const dateTimeFormatter = new Intl.DateTimeFormat("th-TH", {
 
 export function UploadForm({
   documents,
-  currentUserId,
 }: {
   documents: DocumentOption[];
-  currentUserId: string;
 }) {
   const [documentId, setDocumentId] = useState<string>("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -114,7 +112,6 @@ export function UploadForm({
 
     const formData = new FormData();
     formData.set("documentId", documentId);
-    formData.set("uploadedById", currentUserId);
     files.forEach((file) => formData.append("files", file));
 
     setIsUploading(true);

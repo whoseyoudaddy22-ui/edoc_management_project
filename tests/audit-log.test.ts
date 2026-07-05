@@ -116,7 +116,6 @@ describe("Audit log — เอกสาร", () => {
           recipient: "ผู้อำนวยการ",
           sender: "ผู้ทดสอบระบบ",
           content: "เนื้อหาเอกสารทดสอบสำหรับ audit-log.test.ts",
-          createdById: actorId,
         }),
       })
     );
@@ -176,7 +175,6 @@ describe("Audit log — ไฟล์แนบ", () => {
 
     const formData = new FormData();
     formData.set("documentId", documentId);
-    formData.set("uploadedById", actorId);
     formData.set("files", new File(["เนื้อหาไฟล์ทดสอบ"], "probe.txt", { type: "text/plain" }));
 
     const response = await postUpload(

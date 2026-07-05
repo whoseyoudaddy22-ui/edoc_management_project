@@ -50,32 +50,21 @@ export async function POST(request: NextRequest) {
   }
 
   const documentId = formData.get("documentId");
-  const uploadedById = formData.get("uploadedById");
   const files = formData.getAll("files").filter((value): value is File => value instanceof File);
 
   if (typeof documentId !== "string" || !documentId) {
     return NextResponse.json({ error: "กรุณาเลือกเอกสารที่ต้องการแนบไฟล์" }, { status: 400 });
   }
 
-  if (typeof uploadedById !== "string" || !uploadedById) {
-    return NextResponse.json({ error: "กรุณาระบุผู้อัปโหลด" }, { status: 400 });
-  }
-
   if (files.length === 0) {
     return NextResponse.json({ error: "กรุณาเลือกไฟล์ที่ต้องการอัปโหลด" }, { status: 400 });
   }
 
-  const [document, uploader] = await Promise.all([
-    prisma.document.findFirst({ where: { id: documentId, deletedAt: null } }),
-    prisma.user.findUnique({ where: { id: uploadedById } }),
-  ]);
+  // ผู้อัปโหลดต้องเป็นผู้ใช้ที่ login อยู่เท่านั้น (จาก session) ห้ามรับค่านี้จาก client (IDOR)
+  const document = await prisma.document.findFirst({ where: { id: documentId, deletedAt: null } });
 
   if (!document) {
     return NextResponse.json({ error: "ไม่พบเอกสารที่ระบุ" }, { status: 404 });
-  }
-
-  if (!uploader) {
-    return NextResponse.json({ error: "ไม่พบผู้ใช้ที่ระบุ (uploadedById)" }, { status: 404 });
   }
 
   for (const file of files) {
@@ -113,7 +102,7 @@ export async function POST(request: NextRequest) {
             filePath: `/uploads/${documentId}/${storedFileName}`,
             fileType: extension.replace(".", ""),
             fileSize: file.size,
-            uploadedById,
+            uploadedById: session.user.id,
           },
         });
       })

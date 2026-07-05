@@ -5,6 +5,8 @@ import { Priority } from "@/generated/prisma/enums";
 // ทดสอบ "Validation ฟอร์มสร้างเอกสาร (zod schema) reject ข้อมูลผิดรูปแบบ" ตาม module-14-testing.md
 // > ระดับสำคัญ (Module 5) — เป็น unit test ล้วนๆ ไม่แตะฐานข้อมูล เพราะทดสอบแค่ตัว schema เอง
 
+// createdById ไม่ใช่ field ของ schema นี้ตั้งใจ — ผู้สร้างเอกสารต้องมาจาก session เท่านั้น (ดู POST /api/documents)
+// ไม่รับค่าจาก client เพื่อป้องกัน IDOR (แอบอ้างเป็นผู้ใช้อื่น)
 const validPayload = {
   documentTypeId: "doctype-1",
   documentDate: "2026-07-05",
@@ -13,7 +15,6 @@ const validPayload = {
   recipient: "ผู้อำนวยการ",
   sender: "งานสารบรรณ",
   content: "เนื้อหาเอกสารทดสอบ",
-  createdById: "user-1",
 };
 
 describe("createDocumentSchema", () => {
@@ -41,7 +42,7 @@ describe("createDocumentSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  const requiredStringFields = ["documentTypeId", "title", "recipient", "sender", "content", "createdById"] as const;
+  const requiredStringFields = ["documentTypeId", "title", "recipient", "sender", "content"] as const;
 
   for (const field of requiredStringFields) {
     it(`ปฏิเสธเมื่อไม่ระบุ ${field}`, () => {

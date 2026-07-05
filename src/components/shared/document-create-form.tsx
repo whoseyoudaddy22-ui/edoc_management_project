@@ -20,8 +20,6 @@ import { createDocumentSchema } from "@/lib/validations/document";
 import { PRIORITY_LABELS } from "@/lib/labels";
 import { Priority } from "@/generated/prisma/enums";
 
-const documentFormSchema = createDocumentSchema.omit({ createdById: true });
-
 function todayAsInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -32,10 +30,8 @@ function getCurrentBuddhistYear() {
 
 export function DocumentCreateForm({
   documentTypes,
-  currentUserId,
 }: {
   documentTypes: { id: string; name: string; code: string }[];
-  currentUserId: string;
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdDocumentNumber, setCreatedDocumentNumber] = useState<string | null>(null);
@@ -47,7 +43,7 @@ export function DocumentCreateForm({
     control,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(documentFormSchema),
+    resolver: zodResolver(createDocumentSchema),
     defaultValues: {
       documentTypeId: "",
       documentDate: todayAsInputValue(),
@@ -66,7 +62,7 @@ export function DocumentCreateForm({
       const response = await fetch("/api/documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, createdById: currentUserId }),
+        body: JSON.stringify(values),
       });
       const body = await response.json();
 
