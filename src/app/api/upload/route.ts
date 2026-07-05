@@ -8,6 +8,8 @@ import {
   formatFileSize,
   getFileExtension,
   isAllowedFileExtension,
+  isDangerousFileContent,
+  matchesDeclaredFileType,
 } from "@/lib/upload";
 import { requireAuth, requireRole } from "@/lib/authorize";
 import { Role } from "@/generated/prisma/enums";
@@ -67,6 +69,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "ไม่พบเอกสารที่ระบุ" }, { status: 404 });
   }
 
+  // อ่าน buffer ครั้งเดียวต่อไฟล์ ใช้ทั้งตรวจ magic bytes และเขียนลงดิสก์ทีหลัง
+  const filesWithBuffer: { file: File; buffer: Buffer; extension: string }[] = [];
+
   for (const file of files) {
     if (!isAllowedFileExtension(file.name)) {
       return NextResponse.json(
@@ -82,6 +87,20 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const extension = getFileExtension(file.name);
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    // ตรวจ content จริงของไฟล์ (magic bytes) เสริมจากนามสกุล กันไฟล์ execute ได้ที่แค่เปลี่ยนนามสกุล
+    // ปลอมเป็นประเภทที่อนุญาต (CWE-434)
+    if (isDangerousFileContent(buffer) || !matchesDeclaredFileType(buffer, extension)) {
+      return NextResponse.json(
+        { error: `ไฟล์ ${file.name} มีเนื้อหาไม่ตรงกับประเภทไฟล์ที่ระบุ หรือเป็นไฟล์ที่ไม่อนุญาต` },
+        { status: 400 }
+      );
+    }
+
+    filesWithBuffer.push({ file, buffer, extension });
   }
 
   const uploadDir = path.join(process.cwd(), "public", "uploads", documentId);
@@ -89,10 +108,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const created = await Promise.all(
-      files.map(async (file) => {
-        const extension = getFileExtension(file.name);
+      filesWithBuffer.map(async ({ file, buffer, extension }) => {
         const storedFileName = `${randomUUID()}${extension}`;
-        const buffer = Buffer.from(await file.arrayBuffer());
         await writeFile(path.join(uploadDir, storedFileName), buffer);
 
         return prisma.attachment.create({
