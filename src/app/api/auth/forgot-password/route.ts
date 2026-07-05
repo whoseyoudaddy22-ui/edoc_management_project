@@ -5,6 +5,10 @@ import { createPasswordResetToken } from "@/lib/password-reset";
 import { sendPasswordResetEmail } from "@/lib/mailer";
 import { logAction } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
+import {
+  isForgotPasswordRateLimited,
+  recordForgotPasswordAttempt,
+} from "@/lib/forgot-password-rate-limit";
 
 const GENERIC_MESSAGE = "หากอีเมลนี้มีอยู่ในระบบ ระบบได้ส่งลิงก์รีเซ็ตรหัสผ่านไปให้แล้ว";
 
@@ -25,6 +29,17 @@ export async function POST(request: NextRequest) {
   }
 
   const { email } = parsed.data;
+
+  // นับทุกครั้งที่ขอ ไม่ว่าอีเมลจะมีอยู่จริงหรือไม่ กัน mail-bombing กล่องขาเข้าของเหยื่อ
+  // ด้วยลิงก์รีเซ็ตรหัสผ่านซ้ำๆ (ดู src/lib/forgot-password-rate-limit.ts)
+  if (isForgotPasswordRateLimited(email)) {
+    return NextResponse.json(
+      { error: "คุณขอรีเซ็ตรหัสผ่านบ่อยเกินไป กรุณาลองใหม่ภายหลัง" },
+      { status: 429 }
+    );
+  }
+  recordForgotPasswordAttempt(email);
+
   const user = await prisma.user.findUnique({ where: { email } });
 
   // ไม่พบผู้ใช้หรือบัญชีถูกปิดใช้งาน: ไม่สร้าง token/ไม่ส่งอีเมล/ไม่บันทึก log
