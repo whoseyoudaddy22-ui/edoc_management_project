@@ -234,7 +234,7 @@ describe("Audit log — ผู้ใช้งาน", () => {
         body: JSON.stringify({
           name: "ผู้ใช้ทดสอบ audit log",
           email: "audit-log-managed-user-test@organization.go.th",
-          password: "test12345",
+          password: "Test12345",
           role: Role.VIEWER,
           departmentCode: TEST_DEPARTMENT_CODE,
         }),

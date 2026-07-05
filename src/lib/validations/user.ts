@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { Role } from "@/generated/prisma/enums";
+import { passwordSchema } from "@/lib/validations/password";
 
 export const createUserSchema = z.object({
   name: z.string().min(1, "กรุณาระบุชื่อ"),
   email: z.email("อีเมลไม่ถูกต้อง"),
-  password: z.string().min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"),
+  password: passwordSchema,
   role: z.enum(Role).default(Role.SARABAN),
   departmentCode: z.string().min(1).optional(),
 });
