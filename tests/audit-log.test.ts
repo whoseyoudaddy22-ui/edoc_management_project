@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/prisma";
 import { Role, DocumentStatus, Priority, AuditAction } from "@/generated/prisma/enums";
+import { deleteAuditLogsForTest } from "./db-test-helpers";
 
 // ทดสอบ "Audit log บันทึกครบทุก event ที่กำหนดไว้" ตาม module-14-testing.md > ระดับสำคัญ (Module 12)
 //
@@ -88,7 +89,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // ต้องลบ AuditLog ที่ performedBy ชี้มาที่ user ทดสอบเหล่านี้ก่อน ไม่งั้นลบ User ไม่ได้ (FK constraint)
-  await prisma.auditLog.deleteMany({ where: { performedBy: { in: [actorId, adminId] } } });
+  await deleteAuditLogsForTest({ performedBy: { in: [actorId, adminId] } });
   if (documentId) {
     await prisma.attachment.deleteMany({ where: { documentId } });
   }

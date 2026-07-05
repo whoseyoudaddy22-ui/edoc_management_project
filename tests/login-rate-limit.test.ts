@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { Role, AuditAction } from "@/generated/prisma/enums";
 import { isLoginLocked, LOGIN_MAX_FAILED_ATTEMPTS, LOGIN_LOCKOUT_WINDOW_MINUTES } from "@/lib/login-rate-limit";
+import { deleteAuditLogsForTest } from "./db-test-helpers";
 
 // ทดสอบ rate limiting หน้า login ตาม module-15-deployment.md > Security Hardening
 // ("ตรวจสอบว่า rate limiting มีอยู่ในหน้า login (ป้องกัน brute-force) — เชื่อมกับ Module 12 (Audit Log)
@@ -39,7 +40,7 @@ beforeAll(async () => {
 }, 30_000);
 
 afterEach(async () => {
-  await prisma.auditLog.deleteMany({ where: { performedBy: userId } });
+  await deleteAuditLogsForTest({ performedBy: userId });
 });
 
 afterAll(async () => {
