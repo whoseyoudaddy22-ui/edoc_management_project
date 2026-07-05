@@ -20,6 +20,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   USER_CREATE: "สร้างผู้ใช้งาน",
   USER_UPDATE: "แก้ไขผู้ใช้งาน",
   USER_DEACTIVATE: "ปิดใช้งานบัญชี",
+  PASSWORD_RESET_REQUESTED: "ขอรีเซ็ตรหัสผ่าน",
+  PASSWORD_RESET_COMPLETED: "ตั้งรหัสผ่านใหม่สำเร็จ",
 };
 
 export const AUDIT_TARGET_TYPE_LABELS: Record<string, string> = {
@@ -42,6 +44,8 @@ const AUDIT_ACTION_BADGE_CLASSNAME: Record<AuditAction, string> = {
   USER_CREATE: "bg-green-100 text-green-700",
   USER_UPDATE: "bg-sky-100 text-sky-700",
   USER_DEACTIVATE: "bg-red-100 text-red-700",
+  PASSWORD_RESET_REQUESTED: "bg-amber-100 text-amber-800",
+  PASSWORD_RESET_COMPLETED: "bg-green-100 text-green-700",
 };
 
 export function getAuditActionBadgeClassName(action: AuditAction): string {

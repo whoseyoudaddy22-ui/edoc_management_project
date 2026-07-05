@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/shared/password-input";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
 export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
@@ -67,9 +69,8 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         <Label htmlFor="password">
           รหัสผ่าน<span className="text-red-500">*</span>
         </Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="current-password"
           placeholder="••••••••"
           {...register("password")}
@@ -77,6 +78,16 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         {errors.password && (
           <p className="text-xs text-red-500">{errors.password.message}</p>
         )}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <label htmlFor="remember-me" className="flex items-center gap-2 text-sm text-gray-600">
+          <input id="remember-me" type="checkbox" defaultChecked className="h-4 w-4 rounded border-gray-300" />
+          จดจำการเข้าสู่ระบบ
+        </label>
+        <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+          ลืมรหัสผ่าน?
+        </Link>
       </div>
 
       {submitError && (

@@ -15,12 +15,19 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
-      const isOnLogin = request.nextUrl.pathname.startsWith("/login");
+      const { pathname } = request.nextUrl;
+      const isOnLogin = pathname.startsWith("/login");
+      const isOnPublicAuthPage =
+        pathname.startsWith("/forgot-password") || pathname.startsWith("/reset-password");
 
       if (isOnLogin) {
         if (isLoggedIn) {
           return Response.redirect(new URL("/dashboard", request.nextUrl));
         }
+        return true;
+      }
+
+      if (isOnPublicAuthPage) {
         return true;
       }
 

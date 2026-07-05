@@ -46,6 +46,8 @@ enum AuditAction {
   USER_CREATE
   USER_UPDATE
   USER_DEACTIVATE
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
 }
 
 model User {
@@ -63,6 +65,7 @@ model User {
   approvedDocuments Document[]   @relation("DocumentApprovedBy")
   attachments       Attachment[]
   auditLogs         AuditLog[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model DocumentType {
@@ -127,6 +130,19 @@ model Attachment {
 
   document   Document @relation(fields: [documentId], references: [id])
   uploadedBy User     @relation(fields: [uploadedById], references: [id])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model AuditLog {
