@@ -9,7 +9,8 @@ import {
   getFileExtension,
   isAllowedFileExtension,
 } from "@/lib/upload";
-import { requireAuth } from "@/lib/authorize";
+import { requireAuth, requireRole } from "@/lib/authorize";
+import { Role } from "@/generated/prisma/enums";
 import { logAction } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
 
@@ -33,8 +34,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ data: attachments });
 }
 
+// อัปโหลดไฟล์แนบได้เฉพาะ ADMIN/SARABAN ตาม docs/modules/module-10-user-management.md
 export async function POST(request: NextRequest) {
-  const authResult = await requireAuth();
+  const authResult = await requireRole([Role.ADMIN, Role.SARABAN]);
   if (authResult.error) {
     return authResult.error;
   }

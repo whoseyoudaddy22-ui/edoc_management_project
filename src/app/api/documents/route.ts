@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import type { Document } from "@/generated/prisma/client";
 import { createDocumentWithAutoNumber } from "@/lib/document-number";
 import { createDocumentSchema } from "@/lib/validations/document";
-import { requireAuth } from "@/lib/authorize";
+import { requireRole } from "@/lib/authorize";
+import { Role } from "@/generated/prisma/enums";
 import { logAction } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
 
@@ -11,8 +12,10 @@ import { AuditAction } from "@/generated/prisma/enums";
 // (รองรับ multi-criteria search ตาม docs/modules/module-11-metadata-search.md)
 // ไม่ทำ endpoint ค้นหาซ้ำที่นี่ เหลือเฉพาะ POST สำหรับสร้างเอกสาร
 
+// สร้างเอกสารได้เฉพาะ ADMIN/SARABAN (เจ้าหน้าที่สารบรรณ) ตาม docs/modules/module-10-user-management.md
+// APPROVER/VIEWER ไม่มีสิทธิ์สร้างเอกสาร
 export async function POST(request: NextRequest) {
-  const authResult = await requireAuth();
+  const authResult = await requireRole([Role.ADMIN, Role.SARABAN]);
   if (authResult.error) {
     return authResult.error;
   }

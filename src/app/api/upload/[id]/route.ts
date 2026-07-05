@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { unlink } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/authorize";
+import { requireRole } from "@/lib/authorize";
+import { Role } from "@/generated/prisma/enums";
 import { logAction } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
+// ลบไฟล์แนบได้เฉพาะ ADMIN/SARABAN ตาม docs/modules/module-10-user-management.md
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
-  const authResult = await requireAuth();
+  const authResult = await requireRole([Role.ADMIN, Role.SARABAN]);
   if (authResult.error) {
     return authResult.error;
   }

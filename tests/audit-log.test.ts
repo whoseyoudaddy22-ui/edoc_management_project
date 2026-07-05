@@ -210,7 +210,8 @@ describe("Audit log — ไฟล์แนบ", () => {
 
 describe("Audit log — เอกสาร (ลบ)", () => {
   it("DOCUMENT_DELETE: ลบเอกสาร (soft delete) ต้องมี audit log", async () => {
-    setSession(Role.SARABAN, actorId);
+    // ลบเอกสารจำกัดเฉพาะ ADMIN ตาม docs/modules/module-10-user-management.md
+    setSession(Role.ADMIN, adminId);
 
     const response = await deleteDocument(
       new NextRequest(`http://localhost/api/documents/${documentId}`, { method: "DELETE" }),
@@ -220,7 +221,7 @@ describe("Audit log — เอกสาร (ลบ)", () => {
 
     const log = await latestAuditLog(AuditAction.DOCUMENT_DELETE, "Document", documentId);
     expect(log).not.toBeNull();
-    expect(log?.performedBy).toBe(actorId);
+    expect(log?.performedBy).toBe(adminId);
   });
 });
 

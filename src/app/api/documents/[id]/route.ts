@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { updateDocumentSchema } from "@/lib/validations/document";
-import { requireAuth } from "@/lib/authorize";
+import { requireAuth, requireRole } from "@/lib/authorize";
+import { Role, DocumentStatus } from "@/generated/prisma/enums";
 import { logAction, diffFields } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
 
@@ -32,8 +33,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   return NextResponse.json({ data: document });
 }
 
+// VIEWER ดูได้อย่างเดียว แก้ไขเอกสารไม่ได้เลยตาม docs/modules/module-10-user-management.md
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  const authResult = await requireAuth();
+  const authResult = await requireRole([Role.ADMIN, Role.SARABAN, Role.APPROVER]);
   if (authResult.error) {
     return authResult.error;
   }
@@ -63,7 +65,34 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "ไม่พบเอกสารที่ระบุ" }, { status: 404 });
   }
 
-  const { approvedById, ...rest } = parsed.data;
+  const { approvedById, status, ...contentRest } = parsed.data;
+
+  // Approver มีหน้าที่แค่เปลี่ยนสถานะเป็นอนุมัติ/ไม่อนุมัติเท่านั้น แก้ไขเนื้อหาเอกสารไม่ได้
+  const isApprovalDecision =
+    approvedById !== undefined ||
+    status === DocumentStatus.APPROVED ||
+    status === DocumentStatus.REJECTED;
+
+  const approverRoles: Role[] = [Role.ADMIN, Role.APPROVER];
+  if (isApprovalDecision && !approverRoles.includes(session.user.role)) {
+    return NextResponse.json(
+      { error: "เฉพาะผู้มีสิทธิ์อนุมัติเท่านั้นที่เปลี่ยนสถานะอนุมัติ/ไม่อนุมัติได้" },
+      { status: 403 }
+    );
+  }
+
+  const hasContentChanges =
+    Object.keys(contentRest).length > 0 || (status !== undefined && !isApprovalDecision);
+
+  const editorRoles: Role[] = [Role.ADMIN, Role.SARABAN];
+  if (hasContentChanges && !editorRoles.includes(session.user.role)) {
+    return NextResponse.json(
+      { error: "เฉพาะเจ้าหน้าที่สารบรรณเท่านั้นที่แก้ไขเนื้อหาเอกสารได้" },
+      { status: 403 }
+    );
+  }
+
+  const rest = { ...contentRest, ...(status !== undefined ? { status } : {}) };
 
   if (approvedById) {
     const approver = await prisma.user.findUnique({ where: { id: approvedById } });
@@ -125,8 +154,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+// ลบเอกสาร (soft delete) จำกัดเฉพาะ ADMIN ตาม docs/modules/module-10-user-management.md
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
-  const authResult = await requireAuth();
+  const authResult = await requireRole([Role.ADMIN]);
   if (authResult.error) {
     return authResult.error;
   }
