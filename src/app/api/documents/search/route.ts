@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildDocumentSearchWhere } from "@/lib/document-search";
 import { documentSearchQuerySchema } from "@/lib/validations/document";
+import { requireAuth } from "@/lib/authorize";
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult.error) {
+    return authResult.error;
+  }
+
   const parsedQuery = documentSearchQuerySchema.safeParse(
     Object.fromEntries(request.nextUrl.searchParams)
   );

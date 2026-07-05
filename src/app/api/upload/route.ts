@@ -14,6 +14,11 @@ import { logAction } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult.error) {
+    return authResult.error;
+  }
+
   const documentId = request.nextUrl.searchParams.get("documentId");
 
   if (!documentId) {

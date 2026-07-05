@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/authorize";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
+  const authResult = await requireAuth();
+  if (authResult.error) {
+    return authResult.error;
+  }
+
   const { id } = await params;
 
   const document = await prisma.document.findFirst({
