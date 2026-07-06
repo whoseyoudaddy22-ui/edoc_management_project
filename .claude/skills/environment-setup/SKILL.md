@@ -101,7 +101,7 @@ npm install
 | `.env.test` | `npm run test` (Module 14) | `docs_management_test` |
 | `.env.production` | production deploy จริง (Module 15) | `docs_management_prod` |
 
-**กฎสำคัญ:** ทั้ง 3 ไฟล์ต้องมี `DATABASE_URL`, secret key (`NEXTAUTH_SECRET` ฯลฯ) แยกกันคนละค่า **ห้ามใช้ค่าเดียวกันข้ามไฟล์** โดยเฉพาะ production ต้องเป็นค่าใหม่ที่สุ่มขึ้นเสมอ ไม่ใช่ copy จาก `.env`
+**กฎสำคัญ:** ทั้ง 3 ไฟล์ต้องมี `DATABASE_URL`, secret key (`AUTH_SECRET` ฯลฯ) แยกกันคนละค่า **ห้ามใช้ค่าเดียวกันข้ามไฟล์** โดยเฉพาะ production ต้องเป็นค่าใหม่ที่สุ่มขึ้นเสมอ ไม่ใช่ copy จาก `.env`
 
 ```bash
 # ตัวอย่างสร้าง secret แบบสุ่มปลอดภัย

@@ -32,7 +32,7 @@
 - [ ] ยืนยันว่า Module 14 (Testing) ผ่านครบทุกเคสระดับวิกฤตแล้ว
 - [ ] ตรวจสอบ `.env.production` แยกจาก `.env` ที่ใช้ตอนพัฒนา — ค่าที่ต้องเปลี่ยน:
   - `DATABASE_URL` ชี้ไปที่ฐานข้อมูล production
-  - `NEXTAUTH_SECRET` / secret key ต่างๆ ต้องเป็นค่าใหม่ที่สุ่มขึ้นเฉพาะ production (**ห้ามใช้ค่าเดียวกับตอน dev**)
+  - `AUTH_SECRET` / secret key ต่างๆ ต้องเป็นค่าใหม่ที่สุ่มขึ้นเฉพาะ production (**ห้ามใช้ค่าเดียวกับตอน dev**)
   - `NODE_ENV=production`
 - [ ] ลบ/ปิด API endpoint หรือหน้าที่ใช้เฉพาะตอนพัฒนา (เช่น seed data endpoint) ไม่ให้เข้าถึงได้จาก production
 
