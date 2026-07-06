@@ -34,8 +34,10 @@ services:
       # override DATABASE_URL ใน .env.production (ซึ่งเผื่อไว้สำหรับ deploy แบบไม่ใช้ Docker)
       # ให้ชี้ไปที่ service "db" ในเครือข่าย compose แทน
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    # ผูกกับ localhost เท่านั้น เพราะ Nginx (host) เป็นทางเข้าสาธารณะทางเดียวหลังตั้ง reverse proxy
+    # (module-15-deployment.md > Security Hardening: เปิดเฉพาะ port 80/443 ให้เข้าถึงจากภายนอก)
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       # bind mount แทน named volume เพื่อให้สคริปต์ backup-files.sh (รันบนเครื่อง host)
       # อ่านไฟล์ path เดียวกับที่ app เขียนได้โดยตรง
