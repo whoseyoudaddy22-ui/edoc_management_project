@@ -2,6 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getSafeCallbackUrl } from "@/lib/safe-redirect";
+import { FooterCredits } from "@/components/shared/footer-credits";
 import { LoginForm } from "@/components/shared/login-form";
 
 export default async function LoginPage({
@@ -39,9 +40,7 @@ export default async function LoginPage({
         <LoginForm callbackUrl={getSafeCallbackUrl(callbackUrl)} />
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        ระบบบริหารจัดการการสร้างและจัดเก็บแฟ้มเอกสารอิเล็กทรอนิกส์
-      </p>
+      <FooterCredits />
     </div>
   );
 }
