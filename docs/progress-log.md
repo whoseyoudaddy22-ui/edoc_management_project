@@ -32,6 +32,18 @@
 - [ ] Revoke GitHub PAT ที่ใช้ push หลายรอบ (หลุดเข้า chat history ไปแล้ว) แล้วเปลี่ยนไปใช้ `gh auth login` แทนในอนาคต
 - [ ] ตรวจสอบ "ประวัติการทดสอบ Runbook" ท้าย `disaster-recovery.md` ให้ตรงกับสถานะจริงล่าสุด
 
+## 2026-07-07
+
+- **ยืนยันผลทดสอบ `sudo shutdown` จริง (poweroff เต็มรูป ไม่ใช่แค่ reboot):** เปิดเครื่องกลับมาวันถัดไป เข้าเว็บผ่าน `https://192.168.1.155` (ผ่าน Nginx reverse proxy จริง ไม่ใช่ port 3000 ตรง) ได้ปกติ, static IP กลับมาเป็น `192.168.1.155` เหมือนเดิมตามที่ตั้งไว้ใน netplan → **ปิดรายการ "Nginx/static IP ยังไม่เคยผ่านการทดสอบ reboot จริง" ได้แล้ว** (docker/cron/fail2ban เคยยืนยันจากการทดสอบ reboot รอบก่อนหน้าอยู่แล้ว)
+
+### ยังไม่ได้ทำ (อัปเดต)
+- [x] ตั้งค่า `ufw` firewall (2026-07-07) — เปิดเฉพาะ `22`/`80`/`443` (IPv4+IPv6), default deny incoming/allow outgoing, `systemctl is-enabled ufw` = enabled (บูตแล้วเปิดเองอัตโนมัติ) ทดสอบแล้ว SSH session เดิมไม่หลุดระหว่างเปิดใช้งาน
+- [ ] ตั้ง DHCP reservation ที่ router
+- [ ] อัปเดต `docs/runbooks/disaster-recovery.md` (ยังอ้างอิงเครื่อง Windows เดิม)
+- [x] ทดสอบ rollback จริง (2026-07-07) — ขอบเขต: เฉพาะระดับแอป/Docker image (ไม่แตะ DB schema) ผลลัพธ์: **ผ่านทั้งหมด** deploy เวอร์ชันทดสอบ (`[TEST-ROLLBACK-v2]` title marker) → ยืนยันขึ้นจริงผ่าน Nginx → retag image เดิม (`edoc-app:known-good-39e57d5`) กลับมาแล้ว rollback → ยืนยันกลับเป็นเดิม → rebuild ใหม่จาก git HEAD สะอาด → ยืนยันรอบสุดท้ายตรงกับต้นฉบับ ข้อมูล prod (6 users) อยู่ครบตลอดทุกขั้นตอน แม้ compose จะ recreate container `docs-db` เองระหว่างทาง (ผลข้างเคียงที่ไม่ทำลายข้อมูล เพราะอยู่ใน volume `pgdata` แยกจาก container — พบซ้ำเป็นครั้งที่ 2 ในโปรเจกต์นี้)
+- [ ] Revoke GitHub PAT เก่า
+- [ ] ตรวจสอบ "ประวัติการทดสอบ Runbook" ท้าย `disaster-recovery.md`
+
 ### เข้าใช้งานระบบตอนนี้
 - Production จริง: `https://192.168.1.155` (self-signed cert เตือนครั้งแรก กด Advanced → Proceed) — บัญชี admin/audit จริงคนละรหัสกับ dev, บัญชีอาจารย์ทดสอบ 4 role (`*@test.com` / `Test1234`) ก็ล็อกอินผ่าน URL นี้ได้เหมือนกัน
 - ถ้าเครื่อง reboot ไปแล้วอยากกลับมาที่ session แชทนี้: `cd` เข้าโฟลเดอร์โปรเจกต์แล้วรัน `claude --continue`
