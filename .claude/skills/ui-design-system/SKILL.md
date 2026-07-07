@@ -3,7 +3,7 @@ name: ui-design-system
 description: Defines the visual design system (colors, typography, spacing, component conventions) for the Electronic Document Creation and Archiving Management System, based on the approved UI mockups (dashboard, create document, document list, upload, print preview). Use this skill whenever building or editing any page, component, or layout in this project — sidebar navigation, dashboard cards, tables, forms, badges, buttons — so that every screen Claude builds stays visually consistent with the mockups. Also use when choosing Tailwind classes, shadcn/ui component variants, or colors for any new UI element.
 ---
 
-# UI Design System (ระบบออกแบบหน้าตาโปรแกรม)
+# UI Design System (ระบบออกแบบหน้าตาโปรแกรม) — v2 (รอบ Redesign 2026-07-07)
 
 ## Purpose
 
@@ -12,40 +12,81 @@ description: Defines the visual design system (colors, typography, spacing, comp
 ห้าม Claude เลือกสี/สไตล์ขึ้นใหม่เองระหว่างเขียนโค้ด — ถ้าต้องการ token สีหรือ component ที่ไม่มีในไฟล์นี้ ให้เพิ่มเข้าไปในไฟล์นี้ก่อน แล้วค่อยใช้ในโค้ด เพื่อให้ทุกคน/ทุก session อ้างอิงจากที่เดียวกัน
 
 > อ้างอิงจาก mockup หน้า Dashboard, สร้างเอกสาร, เอกสารทั้งหมด, อัปโหลดไฟล์ และพิมพ์เอกสาร ในสไลด์นำเสนอโปรเจกต์
+> ทิศทางที่ผู้ใช้อนุมัติรอบ redesign (2026-07-07): คงชุดสีกรมท่า + ทอง + น้ำเงิน, ฟอนต์ UI = Noto Sans Thai, หน้า Login เป็น card กลางจอแบบปรับโฉม
+
+## สถานะการปรับใช้ (Implementation Status)
+
+| ขั้น | สถานะ |
+|---|---|
+| 1. ไฟล์นี้เป็น source of truth ค่าใหม่ | ✅ อัปเดตแล้ว (เวอร์ชันนี้) |
+| 2. Wire token เข้า `src/app/globals.css` + ฟอนต์ไทยใน `src/app/layout.tsx` | ⬜ ยังไม่ทำ — ต้องทำก่อนแก้หน้าใดๆ |
+| 3. ปรับหน้าตาม module (เริ่ม Login / Module 16) | ⬜ ยังไม่ทำ |
+
+เมื่อทำขั้น 2–3 เสร็จ ให้กลับมาอัปเดตตารางนี้
+
+## กติกาหลัก (Hard Rules)
+
+1. **ห้ามใช้ Tailwind palette class ตรงๆ กับสีที่มีความหมายเชิงระบบ** เช่น `bg-blue-600`, `text-red-500`, `bg-[#1e2a4a]` — ต้องใช้ semantic token ผ่าน class ของ shadcn theme (`bg-primary`, `text-destructive`, `bg-sidebar`, `text-muted-foreground`, `border-input`) หรือ token สถานะในไฟล์นี้เท่านั้น ข้อยกเว้นเดียว: เฉดเทา neutral เชิงโครงสร้าง (`bg-gray-50`, `border-gray-200`) ที่ระบุไว้ในตาราง token แล้ว
+2. สีทุกค่าที่โค้ดใช้ ต้องประกาศเป็น CSS variable ใน `src/app/globals.css` (`:root` + `@theme inline`) และมีแถวในตาราง token ของไฟล์นี้ — ถ้าจะเพิ่มสีใหม่ ให้เพิ่มที่ไฟล์นี้ก่อน แล้วค่อยเพิ่มใน globals.css
+3. ปุ่ม primary ใช้ shadcn `<Button>` variant default เปล่าๆ (สีมาจาก `--primary`) — **ห้าม** เขียน `className="bg-blue-600 hover:bg-blue-600/90"` ทับอีก (pattern เก่าที่ต้องทยอยลบออก)
+4. ไอคอนทั้งระบบมาจาก `lucide-react` เท่านั้น
 
 ## Color Tokens
 
-กำหนดเป็น CSS variable / Tailwind theme extend เพื่อให้เปลี่ยนธีมได้จากจุดเดียว
+ค่าอ้างอิงเป็น hex (คอลัมน์ oklch คือค่าที่ใช้จริงใน globals.css ให้แปลงจาก hex นี้)
 
-| Token | สี (ประมาณ) | ใช้กับ |
+### Brand / Semantic (map เข้า shadcn theme variables)
+
+| shadcn variable | ค่า (hex) | oklch โดยประมาณ | ใช้กับ |
+|---|---|---|---|
+| `--primary` | `#2563eb` (blue-600 เดิม ประกาศเป็นทางการ) | `oklch(0.546 0.245 262.88)` | ปุ่มหลัก, ลิงก์, แถบคั่นข้าง "เรื่อง", focus indicator |
+| `--primary-foreground` | `#ffffff` | `oklch(1 0 0)` | ตัวอักษรบนปุ่ม primary |
+| `--ring` | `#2563eb` (= primary) | เท่ากับ `--primary` | focus ring ของ input/ปุ่มทุกตัว |
+| `--destructive` | `#dc2626` (red-600) | `oklch(0.577 0.245 27.32)` | ปุ่ม/ไอคอนลบ, ข้อความ error |
+| `--sidebar` | `#1e2a4a` (กรมท่า จาก mockup) | `oklch(0.291 0.061 267)` | พื้นหลัง sidebar |
+| `--sidebar-foreground` | `#e2e8f0` (slate-200) | — | ตัวอักษรเมนู sidebar |
+| `--sidebar-accent` | `#2c3b63` (กรมท่าอ่อนกว่าพื้น) | — | แถบเมนู active / hover ใน sidebar |
+| `--sidebar-accent-foreground` | `#ffffff` | — | ตัวอักษรเมนู active |
+| `--background` | `#f9fafb` (gray-50) | — | พื้นหลังพื้นที่เนื้อหาหลัก (นอก sidebar) |
+| `--card` / `--popover` | `#ffffff` | — | พื้นหลัง card, table, ฟอร์ม, dialog |
+| `--border` / `--input` | `#e5e7eb` (gray-200) | — | เส้นขอบ card, table, input |
+| `--foreground` | `#111827` (gray-900) | — | ข้อความหลัก |
+| `--muted-foreground` | `#6b7280` (gray-500) | — | label, ข้อความรอง, timestamp |
+
+### Accent เฉพาะทาง (custom token)
+
+| Token | ค่า (hex) | ใช้กับ |
 |---|---|---|
-| `--color-sidebar-bg` | น้ำเงินกรมท่าเข้ม (`#1e2a4a` โทนใกล้เคียง) | พื้นหลัง sidebar เมนูซ้าย |
-| `--color-sidebar-text` | ขาว/เทาอ่อน | ตัวอักษรเมนูใน sidebar |
-| `--color-sidebar-active` | ฟ้าสว่างกว่าพื้นหลัง sidebar เล็กน้อย | แถบเมนูที่ถูกเลือกอยู่ (active state) |
-| `--color-accent-primary` | น้ำเงิน (Tailwind `blue-600` ใกล้เคียง) | ปุ่มหลัก, ลิงก์, แถบคั่นข้าง "เรื่อง" ในเอกสาร |
-| `--color-accent-gold` | เหลืองทอง (โทนโลโก้วงกลม) | โลโก้/ไอคอนหน่วยงานเท่านั้น ไม่ใช้กับปุ่มหรือ text ทั่วไป |
-| `--color-status-pending` | เหลือง (`amber-100` bg / `amber-800` text) | badge สถานะ "รอดำเนินการ" |
-| `--color-status-approved` | เขียว (`green-100` bg / `green-700` text) | badge สถานะ "อนุมัติแล้ว" และไอคอน checkmark |
-| `--color-status-external` | ฟ้า (`sky-100` bg / `sky-700` text) | badge ประเภทเอกสาร เช่น "หนังสือภายนอก" |
-| `--color-surface` | ขาว | พื้นหลัง card, table, ฟอร์ม |
-| `--color-page-bg` | เทาอ่อนมาก (`gray-50`) | พื้นหลังของพื้นที่เนื้อหาหลัก (นอก sidebar) |
-| `--color-border` | เทาอ่อน (`gray-200`) | เส้นขอบ card, table, input |
-| `--color-text-primary` | เทาเข้ม/เกือบดำ | ข้อความหลัก |
-| `--color-text-secondary` | เทากลาง | label, ข้อความรอง, timestamp |
+| `--color-accent-gold` | `#f2b93b` | โลโก้/ตราหน่วยงานเท่านั้น (พื้น badge วงกลมโลโก้ คู่กับไอคอนสี `--sidebar`) — **ห้าม**ใช้กับปุ่ม, ลิงก์, หรือ text ทั่วไป |
+
+### Status Tokens (คู่ bg/fg — ใช้กับ Badge และกล่องข้อความสถานะ)
+
+| Token | bg (hex) | fg (hex) | ใช้กับ |
+|---|---|---|---|
+| `--status-pending-bg/-fg` | `#fef3c7` (amber-100) | `#92400e` (amber-800) | badge "รอดำเนินการ" |
+| `--status-approved-bg/-fg` | `#dcfce7` (green-100) | `#15803d` (green-700) | badge "อนุมัติแล้ว", ไอคอน checkmark |
+| `--status-external-bg/-fg` | `#e0f2fe` (sky-100) | `#0369a1` (sky-700) | badge ประเภทเอกสาร เช่น "หนังสือภายนอก" |
+| `--status-draft-bg/-fg` | `#f3f4f6` (gray-100) | `#374151` (gray-700) | badge "ฉบับร่าง" / สถานะกลางๆ |
+| `--status-rejected-bg/-fg` | `#fee2e2` (red-100) | `#b91c1c` (red-700) | badge "ไม่อนุมัติ/ตีกลับ", กล่อง error ระดับฟอร์ม |
 
 ## Typography
 
+**ฟอนต์ UI ทั้งระบบ: Noto Sans Thai** โหลดผ่าน `next/font/google` ใน `src/app/layout.tsx` (variable font, `subsets: ["thai", "latin"]`) และตั้งเป็น `--font-sans` ตัวจริงใน `@theme` ของ globals.css (แก้ปัญหาเดิมที่ `--font-sans` ชี้หาตัวเองแบบวน และ Geist ไม่มี glyph ไทย ทำให้ตัวไทย fallback ไปฟอนต์เครื่องผู้ใช้)
+
+- Geist Mono คงไว้เป็น `--font-mono` สำหรับโค้ด/เลขที่เอกสารใน UI ถ้าจำเป็น
+- **ฟอนต์เอกสาร TH Sarabun New (`.font-document`) ห้ามแตะ** — ใช้เฉพาะเนื้อหาเอกสารที่ preview/print เท่านั้น (ดู skill `official-document-template`)
+
 | ระดับ | ขนาด/น้ำหนัก | ใช้กับ |
 |---|---|---|
-| Page Title | `text-xl font-semibold` | หัวข้อหน้า เช่น "แดชบอร์ด", "สร้างเอกสาร" |
-| Card Number (ตัวเลขสรุปในแดชบอร์ด) | `text-3xl font-bold` | ตัวเลขในการ์ดสรุป เช่น "1", "0" |
-| Card Label | `text-sm text-secondary` | ป้ายกำกับใต้/เหนือตัวเลขในการ์ด |
-| Table Header | `text-sm font-medium text-secondary uppercase` | หัวตาราง |
+| Page Title | `text-xl font-semibold` | หัวข้อหน้า เช่น "แดชบอร์ด", "สร้างเอกสาร", "เข้าสู่ระบบ" |
+| Card Number (ตัวเลขสรุปในแดชบอร์ด) | `text-3xl font-bold` | ตัวเลขในการ์ดสรุป |
+| Card Label | `text-sm text-muted-foreground` | ป้ายกำกับใต้/เหนือตัวเลขในการ์ด |
+| Table Header | `text-sm font-medium text-muted-foreground uppercase` | หัวตาราง |
 | Table Cell | `text-sm` | เนื้อหาในตาราง |
 | Form Label | `text-sm font-medium` | label ของ input ในฟอร์ม |
 | Body Text | `text-base` | เนื้อหาเอกสาร, ข้อความทั่วไป |
-
-ฟอนต์ UI ทั่วไป (ไม่ใช่ตัวเอกสารที่ export) ใช้ฟอนต์ระบบมาตรฐานของ Tailwind (`font-sans`) — ฟอนต์ TH Sarabun New/PSK ใช้เฉพาะเนื้อหาเอกสารที่ preview/print เท่านั้น (ดู skill `official-document-template`)
+| App Name (หน้า auth/sidebar) | `text-lg font-semibold` + บรรทัดรอง `text-xs text-muted-foreground` | ชื่อระบบ 2 บรรทัดใต้โลโก้ |
+| Helper / Field Error | `text-xs` (error ใช้ `text-destructive`) | ข้อความช่วยเหลือใต้ input, error รายฟิลด์ |
 
 ## Spacing & Layout
 
@@ -53,42 +94,63 @@ description: Defines the visual design system (colors, typography, spacing, comp
 - **แบ่งเมนู sidebar เป็นกลุ่ม** พร้อมหัวข้อกลุ่มตัวเล็ก (เช่น "ภาพรวม", "เอกสาร", "ระบบ") ตาม mockup
 - **พื้นที่เนื้อหาหลัก:** padding รอบนอก `p-6`, ระยะห่างระหว่าง section `gap-6`
 - **Grid การ์ดสรุปในแดชบอร์ด:** 4 คอลัมน์บนจอกว้าง (`grid-cols-4`), ยุบเหลือ 2 คอลัมน์บนแท็บเล็ต, 1 คอลัมน์บนมือถือ
-- **Card:** ขอบมน `rounded-lg`, เงาบางเบา `shadow-sm`, ขอบเส้นบาง `border border-gray-200`, พื้นหลังขาว, padding ภายใน `p-4` ถึง `p-6`
+- **Card:** ขอบมน `rounded-lg`, เงาบางเบา `shadow-sm`, ขอบเส้นบาง `border` (สีจาก `--border`), พื้นหลัง `bg-card`, padding ภายใน `p-4` ถึง `p-6`
 
 ## Component Conventions
 
+### Auth Page (Login / Forgot password — Module 16)
+
+Layout ที่ผู้ใช้เลือก: **card เดี่ยวกลางจอ แบบปรับโฉม** (ไม่ใช่ split-panel)
+
+- พื้นหลังทั้งจอ: `bg-background` (gray-50) จัด card กึ่งกลางแนวตั้ง-แนวนอน, padding รอบนอก `p-6`
+- Card: `max-w-md` (กว้างขึ้นจากเดิม `max-w-sm`), `rounded-xl border bg-card shadow-sm`, padding ภายใน `p-8`
+- ส่วนหัว card เรียงกลาง: badge วงกลมโลโก้ `h-12 w-12 rounded-full` พื้น `--color-accent-gold` ไอคอน `Building2` สี `--sidebar` → ชื่อระบบ (App Name typography ด้านบน) → เส้นคั่นบางหรือช่องว่าง → หัวข้อ "เข้าสู่ระบบ" (Page Title)
+- ฟิลด์ฟอร์ม: shadcn `Label` + `Input`/`PasswordInput`, ฟิลด์บังคับมี `*` ผ่าน `text-destructive`, error รายฟิลด์ `text-xs text-destructive`
+- แถวตัวเลือก: "จดจำการเข้าสู่ระบบ" ใช้ shadcn `Checkbox` (ห้าม `<input type="checkbox">` ดิบ), ลิงก์ "ลืมรหัสผ่าน?" ใช้ `text-sm text-primary hover:underline`
+- Error ระดับฟอร์ม (เช่น รหัสผ่านผิด/บัญชีถูกล็อก): shadcn `Alert` variant `destructive` ไม่ใช่ `<p>` แต่งเอง
+- ปุ่ม submit: `<Button>` default variant เต็มความกว้าง (`w-full`) ข้อความสถานะ loading ตามเดิม
+- ใต้ card (นอก card): ข้อความ footer `text-xs text-muted-foreground` เช่น ชื่อหน่วยงาน/เวอร์ชันระบบ (ถ้ามี)
+
 ### Sidebar Navigation
+
 - โลโก้/ไอคอนหน่วยงานอยู่บนสุด พร้อมชื่อระบบ 2 บรรทัด (ชื่อระบบ + คำอธิบายสั้น)
 - รายการเมนูมีไอคอนนำหน้าเสมอ (ใช้ `lucide-react`)
-- เมนูที่ active มีพื้นหลังสว่างกว่ารอบข้างและตัวหนา
+- เมนูที่ active ใช้พื้น `--sidebar-accent` ตัวอักษร `--sidebar-accent-foreground` และตัวหนา
 - ด้านล่างสุดของ sidebar แสดงข้อมูลผู้ใช้ที่ล็อกอินอยู่ (avatar วงกลม + ชื่อ + ตำแหน่ง)
 
 ### Dashboard Summary Card
+
 - โครงสร้าง: label (บนซ้าย) + ไอคอนใน badge วงกลมพื้นสี (บนขวา) + ตัวเลขใหญ่ (กลาง) + ข้อความเสริมเล็กๆ ด้านล่าง (เช่น "↑ อัปเดตล่าสุด")
 - ใช้ shadcn/ui `Card` component เป็นฐาน
 
 ### Status Badge
-- ใช้ shadcn/ui `Badge` component แบบ `variant="outline"` หรือ custom class ตาม token สีสถานะด้านบน
+
+- ใช้ shadcn/ui `Badge` แบบ custom class ที่อ้าง status token คู่ bg/fg ด้านบน (เช่น `bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)]` หรือ utility ที่ประกาศใน globals.css)
 - ขอบมนเต็ม (`rounded-full`), padding แนวนอนมากกว่าแนวตั้ง (`px-3 py-1`)
 - ข้อความสั้น กระชับ เช่น "รอดำเนินการ", "อนุมัติแล้ว"
 
 ### Table (เอกสารทั้งหมด)
+
 - แถวสลับสี (zebra stripe) แบบบางเบา หรือใช้เส้นคั่นแถวบาง `border-b`
 - คอลัมน์ "จัดการ" อยู่ขวาสุดเสมอ เป็นกลุ่มไอคอนปุ่ม (ดู/พิมพ์/ลบ) ไม่ใช่ปุ่มข้อความ
 - แถวมี hover state (`hover:bg-gray-50`)
 - ช่องค้นหาและ filter dropdown อยู่แถวบนสุดของตาราง เรียงจากซ้าย (ค้นหา) ไปขวา (filter ประเภท, filter สถานะ)
 
-### Form (สร้างเอกสาร)
+### Form (สร้างเอกสาร และฟอร์มทั่วไป)
+
 - แบ่งฟอร์มเป็น section การ์ดย่อยตามหมวดข้อมูล (เช่น "ข้อมูลหนังสือ", "เนื้อหาเอกสาร") แต่ละ section มีหัวข้อกำกับด้านบนพร้อมไอคอน
-- ฟิลด์บังคับกรอกมีเครื่องหมาย `*` สีแดงต่อท้าย label
-- จัดฟิลด์เป็น 2 คอลัมน์บนจอกว้าง (เช่น เลขที่หนังสือ คู่กับ วันที่หนังสือ) ยุบเป็น 1 คอลัมน์บนจอแคบ
+- ฟิลด์บังคับกรอกมีเครื่องหมาย `*` สี `text-destructive` ต่อท้าย label
+- จัดฟิลด์เป็น 2 คอลัมน์บนจอกว้าง ยุบเป็น 1 คอลัมน์บนจอแคบ
+- **Error/Alert มาตรฐานเดียวทั้งระบบ:** error ระดับฟอร์ม = shadcn `Alert` variant `destructive`, error รายฟิลด์ = `text-xs text-destructive`, checkbox ทุกตัว = shadcn `Checkbox`
 
 ### ปุ่ม (Buttons)
-- ปุ่มหลัก (primary action เช่น "+ สร้างเอกสาร", "บันทึกไฟล์", "พิมพ์เอกสาร"): พื้นน้ำเงิน (`--color-accent-primary`) ตัวอักษรขาว อยู่มุมขวาบนของหน้าเสมอ
-- ปุ่มรอง/ยกเลิก: outline หรือ ghost variant ของ shadcn/ui
-- ปุ่มอันตราย (ลบ): สีแดง ใช้เฉพาะ icon button ในตาราง ไม่ใช่ปุ่มข้อความเต็ม
+
+- ปุ่มหลัก (primary action เช่น "+ สร้างเอกสาร", "บันทึกไฟล์", "พิมพ์เอกสาร"): shadcn `<Button>` variant default (สีจาก `--primary` อัตโนมัติ) อยู่มุมขวาบนของหน้าเสมอ
+- ปุ่มรอง/ยกเลิก: `outline` หรือ `ghost` variant
+- ปุ่มอันตราย (ลบ): variant `destructive` ใช้เฉพาะ icon button ในตาราง ไม่ใช่ปุ่มข้อความเต็ม
 
 ### Upload Zone
+
 - กรอบเส้นประ (`border-dashed`), ไอคอนอัปโหลดตรงกลาง, ข้อความคลิกหรือลากไฟล์วาง
 - แสดงรายการนามสกุลไฟล์ที่รองรับเป็น badge เล็กๆ ใต้ข้อความ (`.pdf` `.docx` `.xlsx` `.jpg/.png` `.txt` `.csv` `.pptx`)
 
@@ -105,6 +167,7 @@ description: Defines the visual design system (colors, typography, spacing, comp
 | สร้างเอกสาร | `FilePlus` |
 | อัปโหลด | `UploadCloud` |
 | พิมพ์ | `Printer` |
+| โลโก้หน่วยงาน | `Building2` |
 
 ## Responsive Rules
 
@@ -115,8 +178,15 @@ description: Defines the visual design system (colors, typography, spacing, comp
 
 ก่อน merge หน้าจอ/component ใหม่ ให้ตรวจสอบว่า:
 
-- [ ] ใช้สีจาก token ในไฟล์นี้เท่านั้น ไม่มีสี hex แปลกปลอมที่เขียนขึ้นเอง
-- [ ] Badge สถานะใช้สีตรงตามความหมาย (เหลือง=รอ, เขียว=อนุมัติ)
+- [ ] ไม่มี palette class เชิงความหมาย (`bg-blue-600`, `text-red-500`) หรือ hex ฝังในโค้ด — ใช้ semantic/status token เท่านั้น
+- [ ] ตัวอักษรไทยแสดงด้วย Noto Sans Thai (ไม่ fallback ฟอนต์เครื่อง) และหน้าดังกล่าวไม่กระทบ `.font-document`
+- [ ] Badge สถานะใช้สีตรงตามความหมาย (เหลือง=รอ, เขียว=อนุมัติ, เทา=ร่าง, แดง=ตีกลับ)
+- [ ] Error ฟอร์มใช้ `Alert` destructive, checkbox ใช้ shadcn `Checkbox`
 - [ ] ไอคอนทั้งหมดมาจาก `lucide-react`
 - [ ] Sidebar และโครงสร้างหน้าหลักสอดคล้องกับหน้าอื่นที่มีอยู่แล้วในระบบ
 - [ ] ปุ่ม primary action อยู่ตำแหน่งมุมขวาบนตามธรรมเนียมของระบบ
+
+## Changelog
+
+- **v2 (2026-07-07):** รอบ redesign ทั้งระบบ — ประกาศค่า hex/oklch จริงของทุก token และ mapping เข้า shadcn theme variables, เพิ่มกติกาห้าม palette class, เปลี่ยนฟอนต์ UI เป็น Noto Sans Thai, เพิ่ม status token `draft`/`rejected`, เพิ่ม convention หน้า Auth (card กลางจอปรับโฉม), Error/Alert/Checkbox มาตรฐานเดียว
+- **v1:** ตาราง token เชิงพรรณนาตาม mockup ในสไลด์นำเสนอ
