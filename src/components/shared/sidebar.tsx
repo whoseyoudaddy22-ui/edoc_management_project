@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -8,7 +9,6 @@ import {
   FilePlus,
   FileText,
   UploadCloud,
-  Building2,
   User,
   Users,
   History,
@@ -53,21 +53,27 @@ export function Sidebar({
     user.role === Role.ADMIN ? [...NAV_GROUPS, ADMIN_NAV_GROUP] : NAV_GROUPS;
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col bg-[#1e2a4a] text-gray-200">
+    <aside className="flex h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-3 px-5 py-6">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f2b93b]">
-          <Building2 className="h-5 w-5 text-[#1e2a4a]" />
+        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-accent-gold/70">
+          <Image
+            src="/logo/plvc.png"
+            alt="ตราวิทยาลัย"
+            width={40}
+            height={40}
+            className="h-full w-full object-cover"
+          />
         </div>
         <div className="leading-tight">
-          <p className="text-sm font-semibold text-white">ระบบจัดเก็บเอกสาร</p>
-          <p className="text-xs text-gray-400">Digital Archive System</p>
+          <p className="text-sm font-semibold text-sidebar-foreground">ระบบจัดเก็บเอกสาร</p>
+          <p className="text-xs text-sidebar-foreground/60">Digital Archive System</p>
         </div>
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-2">
         {navGroups.map((group) => (
           <div key={group.label}>
-            <p className="px-3 pb-2 text-xs font-medium tracking-wide text-gray-400 uppercase">
+            <p className="px-3 pb-2 text-xs font-medium tracking-wide text-sidebar-foreground/60 uppercase">
               {group.label}
             </p>
             <div className="space-y-1">
@@ -81,8 +87,8 @@ export function Sidebar({
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                       isActive
-                        ? "bg-white/10 font-medium text-white"
-                        : "text-gray-300 hover:bg-white/5 hover:text-white"
+                        ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -95,19 +101,19 @@ export function Sidebar({
         ))}
       </nav>
 
-      <div className="flex items-center gap-3 border-t border-white/10 px-5 py-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10">
-          <User className="h-4 w-4 text-gray-200" />
+      <div className="flex items-center gap-3 border-t border-sidebar-border px-5 py-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent">
+          <User className="h-4 w-4 text-sidebar-accent-foreground" />
         </div>
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="truncate text-sm font-medium text-white">{user.name}</p>
-          <p className="text-xs text-gray-400">{ROLE_LABELS[user.role]}</p>
+          <p className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</p>
+          <p className="text-xs text-sidebar-foreground/60">{ROLE_LABELS[user.role]}</p>
         </div>
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
           title="ออกจากระบบ"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
         >
           <LogOut className="h-4 w-4" />
         </button>

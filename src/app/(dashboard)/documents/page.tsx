@@ -1,7 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { DocumentsTable } from "@/components/shared/documents-table";
 
-export default async function DocumentsPage() {
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>;
+}) {
+  const { type } = await searchParams;
+
   const [documentTypes, users, departmentRows] = await Promise.all([
     prisma.documentType.findMany({
       where: { isActive: true },
@@ -22,12 +28,15 @@ export default async function DocumentsPage() {
   ]);
 
   const departmentCodes = departmentRows.map((row) => row.departmentCode);
+  const initialDocumentTypeCodes =
+    type && documentTypes.some((docType) => docType.code === type) ? [type] : [];
 
   return (
     <DocumentsTable
       documentTypes={documentTypes}
       users={users}
       departmentCodes={departmentCodes}
+      initialDocumentTypeCodes={initialDocumentTypeCodes}
     />
   );
 }

@@ -40,15 +40,20 @@ export function DocumentsTable({
   documentTypes,
   users,
   departmentCodes,
+  initialDocumentTypeCodes = [],
 }: {
   documentTypes: DocumentTypeOption[];
   users: UserOption[];
   departmentCodes: string[];
+  initialDocumentTypeCodes?: string[];
 }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [filters, setFilters] = useState<AdvancedSearchFilters>(EMPTY_ADVANCED_FILTERS);
+  const [advancedOpen, setAdvancedOpen] = useState(initialDocumentTypeCodes.length > 0);
+  const [filters, setFilters] = useState<AdvancedSearchFilters>({
+    ...EMPTY_ADVANCED_FILTERS,
+    documentTypeCodes: initialDocumentTypeCodes,
+  });
   const [debouncedReferenceNumber, setDebouncedReferenceNumber] = useState("");
   const [page, setPage] = useState(1);
 
