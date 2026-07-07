@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { getSafeCallbackUrl } from "@/lib/safe-redirect";
 import { LoginForm } from "@/components/shared/login-form";
 
 export default async function LoginPage({
@@ -35,7 +36,7 @@ export default async function LoginPage({
 
         <h1 className="mb-6 text-xl font-semibold text-foreground">เข้าสู่ระบบ</h1>
 
-        <LoginForm callbackUrl={callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/dashboard"} />
+        <LoginForm callbackUrl={getSafeCallbackUrl(callbackUrl)} />
       </div>
 
       <p className="text-xs text-muted-foreground">

@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/shared/password-input";
+import { getSafeCallbackUrl } from "@/lib/safe-redirect";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
 export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
@@ -45,7 +46,9 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
       return;
     }
 
-    router.push(callbackUrl);
+    // ตรวจซ้ำอีกชั้นตรงจุดที่ navigate จริง (defense-in-depth) เผื่อ component นี้ถูกใช้จากที่อื่น
+    // ในอนาคตโดยไม่ผ่านการเช็คที่ page.tsx — ดู src/lib/safe-redirect.ts
+    router.push(getSafeCallbackUrl(callbackUrl));
     router.refresh();
   });
 
