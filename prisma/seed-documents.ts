@@ -14,6 +14,7 @@ const DOCUMENT_TYPE_SEEDS = [
   { code: "0002", name: "หนังสือภายใน" },
   { code: "0003", name: "คำสั่ง" },
   { code: "0004", name: "ประกาศ" },
+  { code: "0005", name: "บันทึกข้อความ" },
 ];
 
 const USER_SEEDS = [

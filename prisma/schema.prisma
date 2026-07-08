@@ -42,6 +42,13 @@ enum Priority {
   IMMEDIATE
 }
 
+// ข้อความปิดท้ายก่อนช่องลงนาม ค่า default ขึ้นกับ documentTypeCode ที่เลือกตอนสร้างเอกสาร
+// (ดู .claude/skills/official-document-template/SKILL.md ส่วน "บันทึกข้อความ (variant)")
+enum ClosingText {
+  THANK_YOU_INFORM // "จึงเรียนมาเพื่อทราบ และดำเนินการตามอำนาจและหน้าที่ต่อไป" — default ของบันทึกข้อความ
+  RESPECTFULLY // "ขอแสดงความนับถือ" — default ของหนังสือภายนอกและประเภทอื่น
+}
+
 enum DocumentStatus {
   DRAFT
   PENDING
@@ -107,6 +114,7 @@ model Document {
   id                String         @id @default(cuid())
   documentNumber    String         @unique
   departmentCode    String
+  departmentName    String? // ชื่อเต็มส่วนราชการ + เบอร์โทร แสดงที่หัวเอกสาร คนละความหมายกับ departmentCode (ใช้ในเลขที่เอกสารอัตโนมัติ)
   documentTypeId    String
   documentTypeCode  String
   buddhistYear      Int
@@ -118,6 +126,7 @@ model Document {
   sender            String
   referenceNumber   String?
   content           String
+  closingText       ClosingText?   @default(RESPECTFULLY)
   status            DocumentStatus @default(DRAFT)
   signerName        String?
   signerPosition    String?

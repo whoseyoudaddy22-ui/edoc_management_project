@@ -22,6 +22,7 @@ const USER_SEEDS = [
 const DOCUMENT_TYPE_SEEDS = [
   { code: "0001", name: "หนังสือภายนอก (ทดสอบ)" },
   { code: "0002", name: "หนังสือภายใน (ทดสอบ)" },
+  { code: "0005", name: "บันทึกข้อความ (ทดสอบ)" },
 ];
 
 function assertUsingTestDatabase() {
@@ -38,7 +39,15 @@ function assertUsingTestDatabase() {
 }
 
 async function resetDatabase() {
-  await prisma.auditLog.deleteMany();
+  // Trigger `audit_log_immutable` (ดู prisma/migrations/*_add_audit_log_immutability_trigger)
+  // บล็อก DELETE บน AuditLog เสมอ ต้องปิด trigger ชั่วคราวเฉพาะช่วง reset ข้อมูลทดสอบนี้เท่านั้น
+  // (แพทเทิร์นเดียวกับ tests/db-test-helpers.ts:deleteAuditLogsForTest)
+  await prisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DISABLE TRIGGER audit_log_immutable`);
+  try {
+    await prisma.auditLog.deleteMany();
+  } finally {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" ENABLE TRIGGER audit_log_immutable`);
+  }
   await prisma.attachment.deleteMany();
   await prisma.document.deleteMany();
   await prisma.user.deleteMany();

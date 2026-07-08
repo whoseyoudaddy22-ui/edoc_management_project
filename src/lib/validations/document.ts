@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DocumentStatus, Priority } from "@/generated/prisma/enums";
+import { ClosingText, DocumentStatus, Priority } from "@/generated/prisma/enums";
 
 export const createDocumentSchema = z.object({
   documentTypeId: z.string().min(1, "กรุณาระบุประเภทเอกสาร"),
@@ -8,8 +8,10 @@ export const createDocumentSchema = z.object({
   priority: z.enum(Priority).default(Priority.NORMAL),
   recipient: z.string().min(1, "กรุณาระบุเรียน"),
   sender: z.string().min(1, "กรุณาระบุจาก"),
+  departmentName: z.string().optional(),
   referenceNumber: z.string().optional(),
   content: z.string().min(1, "กรุณาระบุเนื้อหา"),
+  closingText: z.enum(ClosingText).default(ClosingText.RESPECTFULLY),
   signerName: z.string().optional(),
   signerPosition: z.string().optional(),
 });
@@ -25,8 +27,10 @@ export const updateDocumentSchema = z
     priority: z.enum(Priority).optional(),
     recipient: z.string().min(1).optional(),
     sender: z.string().min(1).optional(),
+    departmentName: z.string().nullable().optional(),
     referenceNumber: z.string().nullable().optional(),
     content: z.string().min(1).optional(),
+    closingText: z.enum(ClosingText).nullable().optional(),
     status: z.enum(DocumentStatus).optional(),
     signerName: z.string().nullable().optional(),
     signerPosition: z.string().nullable().optional(),

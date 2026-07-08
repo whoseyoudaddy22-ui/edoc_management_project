@@ -1,4 +1,4 @@
-import { Division, Priority, Role, TitlePrefix } from "@/generated/prisma/enums";
+import { ClosingText, Division, Priority, Role, TitlePrefix } from "@/generated/prisma/enums";
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
   [Priority.NORMAL]: "ปกติ",
@@ -6,6 +6,22 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
   [Priority.VERY_URGENT]: "ด่วนมาก",
   [Priority.IMMEDIATE]: "ด่วนที่สุด",
 };
+
+export const CLOSING_TEXT_LABELS: Record<ClosingText, string> = {
+  [ClosingText.THANK_YOU_INFORM]: "จึงเรียนมาเพื่อทราบ และดำเนินการตามอำนาจและหน้าที่ต่อไป",
+  [ClosingText.RESPECTFULLY]: "ขอแสดงความนับถือ",
+};
+
+// รหัสประเภทเอกสาร "บันทึกข้อความ" (ดู prisma/seed-documents.ts, prisma/seed-test.ts)
+// ใช้กำหนด default closingText และเลือก layout variant ใน document-template.tsx
+// (ดู .claude/skills/official-document-template/SKILL.md ส่วน "บันทึกข้อความ (variant)")
+export const MEMO_DOCUMENT_TYPE_CODE = "0005";
+
+export function getDefaultClosingText(documentTypeCode: string): ClosingText {
+  return documentTypeCode === MEMO_DOCUMENT_TYPE_CODE
+    ? ClosingText.THANK_YOU_INFORM
+    : ClosingText.RESPECTFULLY;
+}
 
 export const ROLE_LABELS: Record<Role, string> = {
   [Role.SARABAN]: "เจ้าหน้าที่สารบรรณ",
