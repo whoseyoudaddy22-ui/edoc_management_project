@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // แยก build cache ของ dev server ทดสอบ UI (port 3001, .env.test) ออกจาก .next ปกติ
+  // เพราะ Next.js ห้ามรัน `next dev` สองตัวพร้อมกันถ้าใช้ distDir เดียวกัน (ชนกับ production บน port 3000)
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   async headers() {
     return [
       {
