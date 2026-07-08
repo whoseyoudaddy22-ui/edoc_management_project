@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/authorize";
 import { updateUserSchema } from "@/lib/validations/user";
 import { logAction, diffFields } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
+import { TITLE_PREFIX_LABELS } from "@/lib/labels";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -15,6 +16,11 @@ const userListSelect = {
   email: true,
   role: true,
   departmentCode: true,
+  titlePrefix: true,
+  firstName: true,
+  lastName: true,
+  division: true,
+  position: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -49,10 +55,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "ไม่พบผู้ใช้ที่ระบุ" }, { status: 404 });
   }
 
+  const updateData: Prisma.UserUpdateInput = { ...parsed.data };
+
+  // ชื่อเต็ม (name) ต้อง sync ใหม่ทุกครั้งที่คำนำหน้า/ชื่อ/นามสกุลถูกแก้ไข
+  if (parsed.data.titlePrefix || parsed.data.firstName || parsed.data.lastName) {
+    const titlePrefix = parsed.data.titlePrefix ?? existing.titlePrefix;
+    const firstName = parsed.data.firstName ?? existing.firstName;
+    const lastName = parsed.data.lastName ?? existing.lastName;
+    if (titlePrefix && firstName && lastName) {
+      updateData.name = `${TITLE_PREFIX_LABELS[titlePrefix]}${firstName} ${lastName}`;
+    }
+  }
+
   try {
     const user = await prisma.user.update({
       where: { id },
-      data: parsed.data,
+      data: updateData,
       select: userListSelect,
     });
 

@@ -21,7 +21,18 @@ export default async function UserEditPage({ params }: PageParams) {
 
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, name: true, email: true, role: true, departmentCode: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      departmentCode: true,
+      titlePrefix: true,
+      firstName: true,
+      lastName: true,
+      division: true,
+      position: true,
+    },
   });
 
   if (!user) {

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, UserRound } from "lucide-react";
+import { AlertCircle, Save, UserRound } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateUserSchema } from "@/lib/validations/user";
-import { ROLE_LABELS } from "@/lib/labels";
-import { Role } from "@/generated/prisma/enums";
+import { DIVISION_LABELS, ROLE_LABELS, TITLE_PREFIX_LABELS } from "@/lib/labels";
+import { Division, Role, TitlePrefix } from "@/generated/prisma/enums";
 
 type EditableUser = {
   id: string;
@@ -26,6 +27,11 @@ type EditableUser = {
   email: string;
   role: Role;
   departmentCode: string | null;
+  titlePrefix: TitlePrefix | null;
+  firstName: string | null;
+  lastName: string | null;
+  division: Division | null;
+  position: string | null;
 };
 
 export function UserEditForm({ user }: { user: EditableUser }) {
@@ -40,8 +46,12 @@ export function UserEditForm({ user }: { user: EditableUser }) {
   } = useForm({
     resolver: zodResolver(updateUserSchema),
     defaultValues: {
-      name: user.name,
+      titlePrefix: user.titlePrefix ?? undefined,
+      firstName: user.firstName ?? "",
+      lastName: user.lastName ?? "",
       role: user.role,
+      division: user.division ?? undefined,
+      position: user.position ?? "",
       departmentCode: user.departmentCode ?? "",
     },
   });
@@ -54,6 +64,7 @@ export function UserEditForm({ user }: { user: EditableUser }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
+          position: values.position || null,
           departmentCode: values.departmentCode || null,
         }),
       });
@@ -74,7 +85,7 @@ export function UserEditForm({ user }: { user: EditableUser }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">แก้ไขผู้ใช้งาน</h1>
+        <h1 className="text-xl font-semibold text-foreground">แก้ไขผู้ใช้งาน</h1>
         <Button type="button" onClick={onSubmit} disabled={isSubmitting}>
           <Save className="h-4 w-4" />
           {isSubmitting ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
@@ -82,9 +93,10 @@ export function UserEditForm({ user }: { user: EditableUser }) {
       </div>
 
       {submitError && (
-        <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {submitError}
-        </p>
+        <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
+          <AlertCircle />
+          <AlertTitle>{submitError}</AlertTitle>
+        </Alert>
       )}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
@@ -97,29 +109,118 @@ export function UserEditForm({ user }: { user: EditableUser }) {
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="name">
-                ชื่อ <span className="text-red-500">*</span>
+              <Label htmlFor="titlePrefix">
+                คำนำหน้าชื่อ <span className="text-destructive">*</span>
               </Label>
-              <Input id="name" {...register("name")} />
-              {errors.name && <p className="text-xs text-red-600">{errors.name.message}</p>}
+              <Controller
+                control={control}
+                name="titlePrefix"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(value) => value && field.onChange(value)}
+                  >
+                    <SelectTrigger id="titlePrefix" className="w-full">
+                      <SelectValue placeholder="เลือกคำนำหน้าชื่อ">
+                        {(value: TitlePrefix | null) =>
+                          value ? TITLE_PREFIX_LABELS[value] : "เลือกคำนำหน้าชื่อ"
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(TitlePrefix).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {TITLE_PREFIX_LABELS[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.titlePrefix && (
+                <p className="text-xs text-destructive">{errors.titlePrefix.message}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="firstName">
+                ชื่อ <span className="text-destructive">*</span>
+              </Label>
+              <Input id="firstName" {...register("firstName")} />
+              {errors.firstName && (
+                <p className="text-xs text-destructive">{errors.firstName.message}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lastName">
+                นามสกุล <span className="text-destructive">*</span>
+              </Label>
+              <Input id="lastName" {...register("lastName")} />
+              {errors.lastName && (
+                <p className="text-xs text-destructive">{errors.lastName.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">อีเมล</Label>
-              <Input id="email" value={user.email} disabled className="text-gray-500" />
+              <Input id="email" value={user.email} disabled className="text-muted-foreground" />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="division">
+                ฝ่าย <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                control={control}
+                name="division"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(value) => value && field.onChange(value)}
+                  >
+                    <SelectTrigger id="division" className="w-full">
+                      <SelectValue placeholder="เลือกฝ่าย">
+                        {(value: Division | null) => (value ? DIVISION_LABELS[value] : "เลือกฝ่าย")}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(Division).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {DIVISION_LABELS[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.division && (
+                <p className="text-xs text-destructive">{errors.division.message}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="position">ตำแหน่งงาน</Label>
+              <Input id="position" placeholder="เช่น หัวหน้าฝ่าย, เจ้าหน้าที่" {...register("position")} />
+              {errors.position && (
+                <p className="text-xs text-destructive">{errors.position.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="departmentCode">หน่วยงาน</Label>
               <Input id="departmentCode" {...register("departmentCode")} />
+              <p className="text-xs text-muted-foreground">
+                รหัสย่อสำหรับระบบออกเลขที่เอกสารอัตโนมัติ เช่น ศรพ, ทสบ (คนละส่วนกับฝ่ายด้านบน)
+              </p>
               {errors.departmentCode && (
-                <p className="text-xs text-red-600">{errors.departmentCode.message}</p>
+                <p className="text-xs text-destructive">{errors.departmentCode.message}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="role">
-                สิทธิ์การใช้งาน <span className="text-red-500">*</span>
+                สิทธิ์การใช้งาน <span className="text-destructive">*</span>
               </Label>
               <Controller
                 control={control}
@@ -144,7 +245,7 @@ export function UserEditForm({ user }: { user: EditableUser }) {
                   </Select>
                 )}
               />
-              {errors.role && <p className="text-xs text-red-600">{errors.role.message}</p>}
+              {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
             </div>
           </CardContent>
         </Card>

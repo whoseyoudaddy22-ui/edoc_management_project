@@ -17,6 +17,24 @@ enum Role {
   VIEWER
 }
 
+enum TitlePrefix {
+  MR
+  MRS
+  MISS
+}
+
+// ฝ่ายงานขององค์กร (จัดหมวดพนักงานในทำเนียบผู้ใช้งาน) — คนละเรื่องกับ User.departmentCode
+// ซึ่งเป็นรหัสย่อหน่วยงานผู้ออกเอกสารที่ใช้ในระบบเลขที่เอกสารอัตโนมัติ (ดู skill document-numbering)
+enum Division {
+  ADMINISTRATION
+  HR
+  FINANCE_ACCOUNTING
+  MARKETING
+  SALES
+  IT
+  CUSTOMER_SERVICE
+}
+
 enum Priority {
   NORMAL
   URGENT
@@ -51,15 +69,20 @@ enum AuditAction {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
+  id             String       @id @default(cuid())
+  email          String       @unique
   passwordHash   String
-  name           String
-  role           Role     @default(SARABAN)
+  name           String // ชื่อเต็มคำนวณจาก titlePrefix+firstName+lastName เก็บไว้ใช้แสดงผลจุดอื่นในระบบ (เอกสาร, sidebar, audit log ฯลฯ)
+  titlePrefix    TitlePrefix?
+  firstName      String?
+  lastName       String?
+  division       Division? // ฝ่ายงาน (ข้อมูลทำเนียบผู้ใช้งาน) — nullable เพื่อไม่กระทบบัญชีเดิมที่มีอยู่ก่อน field นี้
+  position       String? // ตำแหน่งงาน ใช้เติมอัตโนมัติในช่อง "ตำแหน่งผู้ลงนาม" ของเอกสารได้ในอนาคต
+  role           Role         @default(SARABAN)
   departmentCode String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   createdDocuments  Document[]   @relation("DocumentCreatedBy")
   approvedDocuments Document[]   @relation("DocumentApprovedBy")
