@@ -1,8 +1,9 @@
 #!/bin/bash
-# รวมงาน backup ประจำวัน (ฐานข้อมูล + ไฟล์แนบ) เรียกโดย Windows Task Scheduler
-# เทียบเท่ากับสองบรรทัดใน crontab ที่ระบุใน docs/modules/module-13-backup-recovery.md
-# (เครื่องนี้เป็น Windows ไม่มี cron จึงใช้ Task Scheduler แทน — ดูรายละเอียดการตั้งค่าใน
-# docs/runbooks/disaster-recovery.md)
+# รวมงาน backup ประจำวัน (ฐานข้อมูล + ไฟล์แนบ) ไว้ในคำสั่งเดียว
+# เขียนไว้ตอนเครื่อง dev ยังเป็น Windows (เรียกผ่าน Task Scheduler) — บนเครื่อง production
+# Linux จริง ณ ตอนนี้ "ไม่ได้ใช้ไฟล์นี้" crontab เรียก backup-db.sh/backup-files.sh
+# แยกกันสองบรรทัดตรงๆ แทน (ดู `crontab -l` และ docs/runbooks/disaster-recovery.md)
+# เก็บไฟล์นี้ไว้เผื่ออยากรวมสองสคริปต์เป็นคำสั่งเดียวอีกในอนาคต
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
