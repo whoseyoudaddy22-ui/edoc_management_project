@@ -16,5 +16,4 @@ backups
 logs
 
 *.md
-tests
 coverage
