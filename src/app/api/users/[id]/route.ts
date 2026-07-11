@@ -62,9 +62,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const titlePrefix = parsed.data.titlePrefix ?? existing.titlePrefix;
     const firstName = parsed.data.firstName ?? existing.firstName;
     const lastName = parsed.data.lastName ?? existing.lastName;
-    if (titlePrefix && firstName && lastName) {
-      updateData.name = `${TITLE_PREFIX_LABELS[titlePrefix]}${firstName} ${lastName}`;
+
+    if (!titlePrefix || !firstName || !lastName) {
+      return NextResponse.json(
+        {
+          error:
+            "บัญชีนี้ยังไม่มีคำนำหน้า/ชื่อ/นามสกุลครบถ้วน กรุณากรอกคำนำหน้า ชื่อ และนามสกุลให้ครบทั้ง 3 ช่องพร้อมกันเพื่ออัปเดตชื่อที่แสดงผล",
+        },
+        { status: 400 }
+      );
     }
+
+    updateData.name = `${TITLE_PREFIX_LABELS[titlePrefix]}${firstName} ${lastName}`;
   }
 
   try {
