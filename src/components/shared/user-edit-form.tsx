@@ -50,7 +50,7 @@ export function UserEditForm({ user }: { user: EditableUser }) {
       firstName: user.firstName ?? "",
       lastName: user.lastName ?? "",
       role: user.role,
-      division: user.division ?? undefined,
+      division: user.division,
       position: user.position ?? "",
       departmentCode: user.departmentCode ?? "",
     },
@@ -168,23 +168,27 @@ export function UserEditForm({ user }: { user: EditableUser }) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="division">
-                ฝ่าย <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="division">ฝ่าย</Label>
               <Controller
                 control={control}
                 name="division"
                 render={({ field }) => (
                   <Select
-                    value={field.value ?? ""}
-                    onValueChange={(value) => value && field.onChange(value)}
+                    value={field.value === null ? "NONE" : (field.value ?? "")}
+                    onValueChange={(value) => {
+                      if (!value) return;
+                      field.onChange(value === "NONE" ? null : value);
+                    }}
                   >
                     <SelectTrigger id="division" className="w-full">
                       <SelectValue placeholder="เลือกฝ่าย">
-                        {(value: Division | null) => (value ? DIVISION_LABELS[value] : "เลือกฝ่าย")}
+                        {(value: Division | "NONE" | null) =>
+                          value === "NONE" ? "ไม่ระบุ" : value ? DIVISION_LABELS[value] : "เลือกฝ่าย"
+                        }
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="NONE">ไม่ระบุ</SelectItem>
                       {Object.values(Division).map((value) => (
                         <SelectItem key={value} value={value}>
                           {DIVISION_LABELS[value]}
