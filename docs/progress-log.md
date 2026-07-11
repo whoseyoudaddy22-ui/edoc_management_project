@@ -65,8 +65,19 @@ Deploy โค้ดล่าสุดจาก `master` ขึ้น production 
 
 ### ยังไม่ได้ทำ (อัปเดต)
 - [x] Revoke GitHub PAT เก่า / เปลี่ยนไปใช้ `gh auth login` (2026-07-11)
-- [ ] **แก้ช่องโหว่ session revocation หลัง logout** (พบใหม่วันนี้, Medium) — เพิ่ม `sessionInvalidatedAt`/`tokenVersion` เช็คใน `jwt` callback หรือเปลี่ยนเป็น `session.strategy: "database"`
+- [x] **แก้ช่องโหว่ session revocation หลัง logout** (2026-07-11 บ่าย, ดูรายละเอียดด้านล่าง) — โค้ด commit แล้ว (`919778a`) แต่**ยังไม่ได้ deploy ขึ้น production**
 - [ ] ตั้ง DHCP reservation ที่ router
 - [ ] อัปเดต `docs/runbooks/disaster-recovery.md` (ยังอ้างอิงเครื่อง Windows เดิม)
 - [ ] ตรวจสอบ "ประวัติการทดสอบ Runbook" ท้าย `disaster-recovery.md`
 - [ ] (เสริม ไม่เร่งด่วน) เพิ่ม Content-Security-Policy header, sanitize `Attachment.fileName` ก่อนบันทึก DB — จากรายงาน security testing วันนี้
+
+### แก้ช่องโหว่ CWE-613 (session revocation หลัง logout) — บ่าย 2026-07-11
+
+Commit `919778a` — `fix(auth): revoke JWT session on logout (CWE-613)`
+
+- **แนวทางที่เลือก:** ไม่ได้เปลี่ยนไปใช้ `session.strategy: "database"` ตามที่ TODO เดิมเสนอไว้ (ต้องเพิ่ม adapter/Session table ใหญ่เกินจำเป็น) แต่เพิ่ม field `User.sessionInvalidatedAt` แทน — logout เซ็ตเป็นเวลาปัจจุบัน แล้ว `jwt()` callback (`src/lib/auth.config.ts`) เช็คทุก request ว่า `token.iat` เก่ากว่าค่านี้หรือ user ถูกปิดใช้งาน (`isActive=false`) ไหม ถ้าใช่ return `null` ให้ next-auth เคลียร์ session ทันที
+- **สิ่งที่ค้นพบระหว่างทางที่เปลี่ยนแผน:** คอมเมนต์เดิมใน `auth.config.ts` เขียนไว้ว่าห้ามใช้ Prisma เพราะต้องรันบน Edge runtime ใน middleware — ตรวจสอบ `node_modules/next` จริง (Next.js 16.2.10) แล้วพบว่าไม่จริงอีกต่อไป: โปรเจกต์นี้ใช้ `src/proxy.ts` ซึ่งเป็น convention ใหม่ของ Next.js 16 (แทน `middleware.ts`) และ **proxy.ts บังคับรันบน Node.js runtime เสมอ ตั้ง edge ไม่ได้เลย** (ระบบ throw error E1031 ถ้าพยายามตั้ง) เพราะงั้นเรียก Prisma ตรงใน `jwt()` callback ที่ทั้ง `proxy.ts` และ `auth.ts` ใช้ร่วมกันได้อย่างปลอดภัย — เป็นทางแก้ที่ตรงจุดกว่าเดิมมาก
+- **ทดสอบยืนยันจริง (ไม่ใช่แค่ unit test):** รันเซิร์ฟเวอร์แยก (`npm run dev:ui-test` port 3001, DB `docs_management_test`, ไม่แตะ prod เลย) ทำ raw token replay แบบเดียวกับตอน security testing เดิม — login → capture session cookie ไว้ต่างหาก → logout → ยิง `/dashboard` ด้วย cookie เก่าตรงๆ (ข้าม cookie jar ปกติ) ผลคือ **307 redirect ไป `/login`** (ก่อนแก้คือ 200 เข้าได้ปกติ ตามที่รายงานไว้เมื่อเช้า) และ query DB ยืนยัน `sessionInvalidatedAt` ถูกเซ็ตจริงหลัง logout
+- `npm run test` ผ่านครบ 95/95 (ไม่มี regression), `npm run build` ผ่าน — migration ใหม่ `20260711111230_add_session_invalidated_at` เป็น additive-only (`ALTER TABLE ... ADD COLUMN`) ปลอดภัยกับข้อมูลเดิม
+- ระหว่างทดสอบต้อง publish port 5432 ของ `docs-db` ชั่วคราว (ผ่าน `docker-compose.dev.yml` override) เพื่อรัน `prisma migrate dev` กับฐาน dev บน host ได้ — **เปิดเสร็จก็ปิดกลับเป็น production-only compose ทันที** (ไม่ publish port 5432 ออกจากเครื่องอีกต่อไป) production (`docs-app`/`docs-db`) ไม่ถูกแตะระหว่างกระบวนการทั้งหมดเลย ยืนยันแล้วว่า `https://192.168.1.155` ยังตอบ 200 ปกติ
+- **ยังไม่ได้ deploy ขึ้น production** — ต้องรันตาม deploy playbook ปกติ (backup DB → tag known-good → `migrate deploy` ผ่าน service `migrate` → build+up → verify) ก่อนถือว่าปิดรายการนี้ได้เต็มรูป
