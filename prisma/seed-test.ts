@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 import { createDocumentWithAutoNumber } from "../src/lib/document-number";
 import { Role, DocumentStatus, Priority, DocumentLayout } from "../src/generated/prisma/enums";
+import { deleteAuditLogsForTest } from "../tests/db-test-helpers";
 
 // Seed สำหรับฐานข้อมูลทดสอบ (docs_management_test) เท่านั้น — ห้ามรันตรงด้วย `tsx`
 // ต้องรันผ่าน `npm run test:db:seed` ซึ่งใช้ dotenv-cli โหลด .env.test เพื่อชี้ DATABASE_URL
@@ -39,15 +40,9 @@ function assertUsingTestDatabase() {
 }
 
 async function resetDatabase() {
-  // Trigger `audit_log_immutable` (ดู prisma/migrations/*_add_audit_log_immutability_trigger)
-  // บล็อก DELETE บน AuditLog เสมอ ต้องปิด trigger ชั่วคราวเฉพาะช่วง reset ข้อมูลทดสอบนี้เท่านั้น
-  // (แพทเทิร์นเดียวกับ tests/db-test-helpers.ts:deleteAuditLogsForTest)
-  await prisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DISABLE TRIGGER audit_log_immutable`);
-  try {
-    await prisma.auditLog.deleteMany();
-  } finally {
-    await prisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" ENABLE TRIGGER audit_log_immutable`);
-  }
+  // Trigger `audit_log_immutable` บล็อก DELETE บน AuditLog เสมอ — ใช้ helper กลางที่ปิด/เปิด
+  // trigger ชั่วคราวให้แล้ว (ดู tests/db-test-helpers.ts:deleteAuditLogsForTest)
+  await deleteAuditLogsForTest({});
   await prisma.attachment.deleteMany();
   await prisma.document.deleteMany();
   await prisma.user.deleteMany();
