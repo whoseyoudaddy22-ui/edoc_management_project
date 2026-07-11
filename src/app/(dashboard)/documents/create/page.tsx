@@ -7,7 +7,7 @@ export default async function CreateDocumentPage() {
     prisma.documentType.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, code: true },
+      select: { id: true, name: true, code: true, layout: true },
     }),
     auth(),
   ]);

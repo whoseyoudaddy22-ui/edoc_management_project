@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 import { createDocumentWithAutoNumber } from "../src/lib/document-number";
-import { Role, DocumentStatus, Priority } from "../src/generated/prisma/enums";
+import { Role, DocumentStatus, Priority, DocumentLayout } from "../src/generated/prisma/enums";
 
 // Seed สำหรับฐานข้อมูลทดสอบ (docs_management_test) เท่านั้น — ห้ามรันตรงด้วย `tsx`
 // ต้องรันผ่าน `npm run test:db:seed` ซึ่งใช้ dotenv-cli โหลด .env.test เพื่อชี้ DATABASE_URL
@@ -20,9 +20,9 @@ const USER_SEEDS = [
 ] as const;
 
 const DOCUMENT_TYPE_SEEDS = [
-  { code: "0001", name: "หนังสือภายนอก (ทดสอบ)" },
-  { code: "0002", name: "หนังสือภายใน (ทดสอบ)" },
-  { code: "0005", name: "บันทึกข้อความ (ทดสอบ)" },
+  { code: "0001", name: "หนังสือภายนอก (ทดสอบ)", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0002", name: "หนังสือภายใน (ทดสอบ)", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0005", name: "บันทึกข้อความ (ทดสอบ)", layout: DocumentLayout.MEMO },
 ];
 
 function assertUsingTestDatabase() {

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         content: input.content,
         // ถ้า client ไม่ส่ง closingText มา ใช้ default ตามประเภทเอกสาร (memo -> จึงเรียนมาเพื่อทราบฯ)
         // ตัดสินที่ server เสมอ ไม่พึ่ง default ฝั่งฟอร์ม เผื่อกรณีเรียก API ตรง
-        closingText: input.closingText ?? getDefaultClosingText(documentType.code),
+        closingText: input.closingText ?? getDefaultClosingText(documentType.layout),
         signerName: input.signerName,
         signerPosition: input.signerPosition,
         documentType: { connect: { id: documentType.id } },

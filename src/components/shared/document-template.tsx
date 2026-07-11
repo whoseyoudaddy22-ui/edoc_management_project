@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { formatThaiDate, formatThaiMonthYear } from "@/lib/format";
-import { CLOSING_TEXT_LABELS, MEMO_DOCUMENT_TYPE_CODE, PRIORITY_LABELS } from "@/lib/labels";
-import { ClosingText, Priority } from "@/generated/prisma/enums";
+import { CLOSING_TEXT_LABELS, PRIORITY_LABELS } from "@/lib/labels";
+import { ClosingText, DocumentLayout, Priority } from "@/generated/prisma/enums";
 
 export type DocumentTemplateData = {
   documentNumber: string;
@@ -18,12 +18,12 @@ export type DocumentTemplateData = {
   closingText: ClosingText | null;
   signerName: string | null;
   signerPosition: string | null;
-  documentType: { name: string };
+  documentType: { name: string; layout: DocumentLayout };
 };
 
 // Layout ตาม .claude/skills/official-document-template — ห้ามแก้โครงสร้าง/ระยะขอบที่นี่โดยไม่แก้ spec ในสกิลก่อน
 export function DocumentTemplate({ document: doc }: { document: DocumentTemplateData }) {
-  const isMemo = doc.documentTypeCode === MEMO_DOCUMENT_TYPE_CODE;
+  const isMemo = doc.documentType.layout === DocumentLayout.MEMO;
 
   return (
     <div

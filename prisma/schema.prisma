@@ -42,11 +42,18 @@ enum Priority {
   IMMEDIATE
 }
 
-// ข้อความปิดท้ายก่อนช่องลงนาม ค่า default ขึ้นกับ documentTypeCode ที่เลือกตอนสร้างเอกสาร
+// ข้อความปิดท้ายก่อนช่องลงนาม ค่า default ขึ้นกับ DocumentType.layout ที่เลือกตอนสร้างเอกสาร
 // (ดู .claude/skills/official-document-template/SKILL.md ส่วน "บันทึกข้อความ (variant)")
 enum ClosingText {
-  THANK_YOU_INFORM // "จึงเรียนมาเพื่อทราบ และดำเนินการตามอำนาจและหน้าที่ต่อไป" — default ของบันทึกข้อความ
-  RESPECTFULLY // "ขอแสดงความนับถือ" — default ของหนังสือภายนอกและประเภทอื่น
+  THANK_YOU_INFORM // "จึงเรียนมาเพื่อทราบ และดำเนินการตามอำนาจและหน้าที่ต่อไป" — default ของ layout MEMO
+  RESPECTFULLY // "ขอแสดงความนับถือ" — default ของ layout OFFICIAL_LETTER
+}
+
+// รูปแบบเอกสารที่ต้องใช้ตอน render/print — เป็น source of truth เดียวสำหรับเลือก layout
+// และ default closingText แทนการเทียบ DocumentType.code ตรงๆ ในโค้ด (ดู security-review 2026-07-11)
+enum DocumentLayout {
+  OFFICIAL_LETTER
+  MEMO
 }
 
 enum DocumentStatus {
@@ -99,13 +106,14 @@ model User {
 }
 
 model DocumentType {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  code        String   @unique
+  id          String         @id @default(cuid())
+  name        String         @unique
+  code        String         @unique
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  layout      DocumentLayout @default(OFFICIAL_LETTER) // ตัดสิน layout/closingText default — ไม่ผูกกับ code
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   documents Document[]
 }

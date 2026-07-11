@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { createDocumentSchema } from "@/lib/validations/document";
 import { CLOSING_TEXT_LABELS, PRIORITY_LABELS, getDefaultClosingText } from "@/lib/labels";
-import { ClosingText, Priority } from "@/generated/prisma/enums";
+import { ClosingText, DocumentLayout, Priority } from "@/generated/prisma/enums";
 
 function todayAsInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -31,7 +31,7 @@ function getCurrentBuddhistYear() {
 export function DocumentCreateForm({
   documentTypes,
 }: {
-  documentTypes: { id: string; name: string; code: string }[];
+  documentTypes: { id: string; name: string; code: string; layout: DocumentLayout }[];
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdDocumentNumber, setCreatedDocumentNumber] = useState<string | null>(null);
@@ -159,7 +159,7 @@ export function DocumentCreateForm({
                       field.onChange(value);
                       const selectedType = documentTypes.find((type) => type.id === value);
                       if (selectedType && !dirtyFields.closingText) {
-                        setValue("closingText", getDefaultClosingText(selectedType.code));
+                        setValue("closingText", getDefaultClosingText(selectedType.layout));
                       }
                     }}
                   >
