@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { ClosingText, DocumentStatus, Priority } from "@/generated/prisma/enums";
 
+// ช่องข้อความที่ไม่บังคับกรอก แต่ฟอร์ม (react-hook-form) จะส่งค่าเป็น "" แทน undefined
+// เมื่อผู้ใช้ไม่ได้พิมพ์อะไร — ถ้าไม่แปลง "" เป็น undefined ก่อน จะถูกบันทึกเป็น "" ใน DB
+// แทนที่จะเป็น null ทั้งที่ field เป็น nullable (แพทเทิร์นเดียวกับ src/lib/validations/user.ts)
+const emptyToUndefined = (val: unknown) =>
+  typeof val === "string" && val.trim() === "" ? undefined : val;
+
 // เพดานความยาวของแต่ละ field กันการยัด string ขนาดใหญ่ผิดปกติเข้า DB (CWE-1284)
 // ตัวเลขอิงความยาวจริงของหนังสือราชการ ปรับได้ถ้าหน้างานพบว่าไม่พอ
 export const FIELD_MAX = {
@@ -30,10 +36,13 @@ export const createDocumentSchema = z.object({
     .string()
     .min(1, "กรุณาระบุจาก")
     .max(FIELD_MAX.sender, `จากต้องไม่เกิน ${FIELD_MAX.sender} ตัวอักษร`),
-  departmentName: z
-    .string()
-    .max(FIELD_MAX.departmentName, `ส่วนราชการต้องไม่เกิน ${FIELD_MAX.departmentName} ตัวอักษร`)
-    .optional(),
+  departmentName: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .max(FIELD_MAX.departmentName, `ส่วนราชการต้องไม่เกิน ${FIELD_MAX.departmentName} ตัวอักษร`)
+      .optional()
+  ),
   referenceNumber: z
     .string()
     .max(FIELD_MAX.referenceNumber, `อ้างอิงต้องไม่เกิน ${FIELD_MAX.referenceNumber} ตัวอักษร`)
