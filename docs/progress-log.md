@@ -65,7 +65,7 @@ Deploy โค้ดล่าสุดจาก `master` ขึ้น production 
 
 ### ยังไม่ได้ทำ (อัปเดต)
 - [x] Revoke GitHub PAT เก่า / เปลี่ยนไปใช้ `gh auth login` (2026-07-11)
-- [x] **แก้ช่องโหว่ session revocation หลัง logout** (2026-07-11 บ่าย, ดูรายละเอียดด้านล่าง) — โค้ด commit แล้ว (`919778a`) แต่**ยังไม่ได้ deploy ขึ้น production**
+- [x] **แก้ช่องโหว่ session revocation หลัง logout** (2026-07-11 บ่าย, ดูรายละเอียดด้านล่าง) — โค้ด commit แล้ว (`919778a`) และ **deploy ขึ้น production เรียบร้อยแล้ว** (2026-07-11 บ่าย)
 - [ ] ตั้ง DHCP reservation ที่ router
 - [ ] อัปเดต `docs/runbooks/disaster-recovery.md` (ยังอ้างอิงเครื่อง Windows เดิม)
 - [ ] ตรวจสอบ "ประวัติการทดสอบ Runbook" ท้าย `disaster-recovery.md`
@@ -80,4 +80,11 @@ Commit `919778a` — `fix(auth): revoke JWT session on logout (CWE-613)`
 - **ทดสอบยืนยันจริง (ไม่ใช่แค่ unit test):** รันเซิร์ฟเวอร์แยก (`npm run dev:ui-test` port 3001, DB `docs_management_test`, ไม่แตะ prod เลย) ทำ raw token replay แบบเดียวกับตอน security testing เดิม — login → capture session cookie ไว้ต่างหาก → logout → ยิง `/dashboard` ด้วย cookie เก่าตรงๆ (ข้าม cookie jar ปกติ) ผลคือ **307 redirect ไป `/login`** (ก่อนแก้คือ 200 เข้าได้ปกติ ตามที่รายงานไว้เมื่อเช้า) และ query DB ยืนยัน `sessionInvalidatedAt` ถูกเซ็ตจริงหลัง logout
 - `npm run test` ผ่านครบ 95/95 (ไม่มี regression), `npm run build` ผ่าน — migration ใหม่ `20260711111230_add_session_invalidated_at` เป็น additive-only (`ALTER TABLE ... ADD COLUMN`) ปลอดภัยกับข้อมูลเดิม
 - ระหว่างทดสอบต้อง publish port 5432 ของ `docs-db` ชั่วคราว (ผ่าน `docker-compose.dev.yml` override) เพื่อรัน `prisma migrate dev` กับฐาน dev บน host ได้ — **เปิดเสร็จก็ปิดกลับเป็น production-only compose ทันที** (ไม่ publish port 5432 ออกจากเครื่องอีกต่อไป) production (`docs-app`/`docs-db`) ไม่ถูกแตะระหว่างกระบวนการทั้งหมดเลย ยืนยันแล้วว่า `https://192.168.1.155` ยังตอบ 200 ปกติ
-- **ยังไม่ได้ deploy ขึ้น production** — ต้องรันตาม deploy playbook ปกติ (backup DB → tag known-good → `migrate deploy` ผ่าน service `migrate` → build+up → verify) ก่อนถือว่าปิดรายการนี้ได้เต็มรูป
+- **Deploy ขึ้น production ตาม playbook ของ `ubuntu-server-ops` (หัวข้อ 6) เรียบร้อยแล้ว** (ผู้ใช้สั่งให้ deploy ต่อทันทีในบทสนทนาเดียวกัน):
+  - `git push origin master` (commit `919778a` + `e16e62d`)
+  - Backup DB prod ก่อนเสมอ: `DB_USER=docs_user_prod DB_NAME=docs_management_prod ./scripts/backup-db.sh` → `backups/database/docs_management_20260711_115230.dump` (24K)
+  - Tag image เดิมเป็น known-good: `edoc-app:known-good-44e1d59` (ก่อนหน้า 2 commit ที่เพิ่ง push)
+  - **จุดที่พลาดแล้วแก้ทัน:** รัน `docker compose run --rm migrate` ครั้งแรกแล้วขึ้น "No pending migrations to apply" ทั้งที่ควรมี migration ใหม่ — สาเหตุคือ service `migrate` ใช้ image cache เดิม (build ก่อนหน้าคอมมิทวันนี้) เพราะ `docker compose run` ไม่ rebuild อัตโนมัติถ้า image มีอยู่แล้ว ต้องรัน `docker compose build migrate` แยกก่อน แล้วรัน `run --rm migrate` ใหม่ถึงจะเจอ migration `20260711111230_add_session_invalidated_at` และ apply สำเร็จ (ตรวจ column ยืนยันด้วย `\d "User"` ในเครื่อง DB จริง)
+  - `docker compose --env-file .env.production up -d --build` → `docs-app` recreate สำเร็จ, log สะอาดไม่มี error, `docker compose ps` ทั้งคู่ up
+  - **Verify ด้วย raw token replay จริงบน production** (บัญชีทดสอบ `saraban@test.com`/`Test1234`): login → `/dashboard` 200 → logout → ยิง cookie เก่าซ้ำ → **307 ไป `/login`** (ก่อน deploy รอบนี้จะเป็น 200) ยืนยันช่องโหว่ปิดจริงบน production ไม่ใช่แค่ dev/test
+  - ปิดรายการนี้ได้เต็มรูปแล้ว ไม่มีรายการค้างต่อจากงานนี้
