@@ -69,7 +69,17 @@ Deploy โค้ดล่าสุดจาก `master` ขึ้น production 
 - [ ] ตั้ง DHCP reservation ที่ router — **ต้องทำผ่านหน้า admin ของ router โดยตรง อยู่นอกเหนือขอบเขตที่ทำจากเครื่องนี้ได้ ต้องให้ผู้ใช้ทำเอง**
 - [x] อัปเดต `docs/runbooks/disaster-recovery.md` (2026-07-11 บ่าย) — เขียนใหม่ให้ตรงกับ Linux production stack จริง (เดิมอ้างอิงเครื่อง Windows/Task Scheduler/port 5433 ที่เลิกใช้แล้ว) เพิ่มขั้นตอน Nginx/HTTPS/ufw/fail2ban/static IP ที่หายไปทั้งหมด (เดิมกู้คืนได้แค่ตัวแอป เข้าเว็บจากเครื่องอื่นไม่ได้เลย)
 - [x] ตรวจสอบ "ประวัติการทดสอบ Runbook" ท้าย `disaster-recovery.md` (2026-07-11 บ่าย) — เพิ่มแถวทดสอบใหม่: backup `docs_management_prod` สดจริง → restore ลง `docs_management_test_restore` (แยกจาก prod จริง) → row count ตรงกันทุกตาราง, `sessionInvalidatedAt` รอดจากการ restore, migration ครบ 10 ตัว — ปิด "ปัญหาที่พบ" เดิม 2/3 ข้อ (commit scripts เข้า git แล้ว, `AUTH_TRUST_HOST` ตั้งถูกแล้ว) ข้อที่เหลือ (cygpath) ไม่เกี่ยวข้องแล้วเพราะย้ายมา Linux — **ยังไม่ได้ทดสอบกู้คืนเครื่องทั้งเครื่อง (Nginx/firewall/static IP) แบบจริงจัง เพราะเสี่ยงเกินไปที่จะทำกับ production ตรงๆ โดยไม่มี VM แยก แนะนำให้ทำก่อนส่งมอบโครงงานถ้าเป็นไปได้**
-- [ ] (เสริม ไม่เร่งด่วน) เพิ่ม Content-Security-Policy header, sanitize `Attachment.fileName` ก่อนบันทึก DB — จากรายงาน security testing วันนี้
+- [x] เพิ่ม Content-Security-Policy header, sanitize `Attachment.fileName` ก่อนบันทึก DB (2026-07-11 บ่าย, commit `d04a5e7`) — deploy ขึ้น production แล้ว, verify แล้วว่า login/dashboard ยังใช้งานได้ปกติภายใต้ CSP ใหม่ (ทุก resource เป็น same-origin อยู่แล้วในแอปนี้ ไม่มี CDN ภายนอก)
+
+## สถานะ Go-live โดยรวม ณ 2026-07-11 (ตั้งเป้าหมาย `/goal`)
+
+ทุกรายการที่ทำได้จากเครื่องนี้เสร็จแล้ว: ช่องโหว่จริงที่พบจาก security testing ปิดครบ (session revocation + CSP + filename sanitization), deploy ขึ้น production ผ่าน playbook มาตรฐานทุกครั้ง, runbook กู้คืนภัยพิบัติตรงกับสภาพแวดล้อมจริงแล้ว, ทดสอบ backup/restore จริงบน production ผ่าน
+
+**เหลือ 2 รายการที่ทำจากเครื่องนี้ไม่ได้จริงๆ (ไม่ใช่เพราะขี้เกียจ แต่เกินขอบเขตของ CLI agent):**
+1. **DHCP reservation ที่ router** — ต้องเข้าหน้า admin ของ router โดยตรง (มักเป็น web UI แยกต่างหาก ไม่ใช่สิ่งที่เข้าถึงได้จากเครื่อง server) ผลกระทบถ้าไม่ทำ: มีความเสี่ยง IP conflict ในอนาคตถ้า DHCP แจก `192.168.1.155` ให้เครื่องอื่น (ปัจจุบันกันไว้แล้วระดับหนึ่งด้วย static IP ฝั่งเครื่อง server เอง) — **ไม่ใช่ตัวบล็อก go-live** เป็นความเสี่ยงระยะยาวที่ยอมรับได้ในระหว่างนี้
+2. **จำลองเครื่อง production เสียหายทั้งเครื่องแบบเต็มรูปแบบ** (ทดสอบ runbook ขั้นตอน 1-2, 7-9: ติดตั้งเครื่องใหม่/Nginx/firewall/static IP) — ต้องมี VM แยกต่างหากถึงจะทดสอบได้อย่างปลอดภัยโดยไม่เสี่ยง downtime เครื่องจริง ซึ่งเครื่องนี้ไม่มีให้ — **แนะนำให้ทำก่อนส่งมอบโครงงานจริง ถ้าหาเครื่อง/VM ทดสอบแยกได้**
+
+ระบบพร้อม go live ในทางเทคนิคแล้ว (ใช้งานจริงอยู่ที่ `https://192.168.1.155`) ส่วนที่เหลือทั้งสองข้อเป็นการลดความเสี่ยงเพิ่มเติม ไม่ใช่สิ่งที่ขวางการเปิดใช้งานจริง
 
 ### แก้ช่องโหว่ CWE-613 (session revocation หลัง logout) — บ่าย 2026-07-11
 
