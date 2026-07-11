@@ -17,11 +17,43 @@ enum Role {
   VIEWER
 }
 
+enum TitlePrefix {
+  MR
+  MRS
+  MISS
+}
+
+// ฝ่ายงานขององค์กร (จัดหมวดพนักงานในทำเนียบผู้ใช้งาน) — คนละเรื่องกับ User.departmentCode
+// ซึ่งเป็นรหัสย่อหน่วยงานผู้ออกเอกสารที่ใช้ในระบบเลขที่เอกสารอัตโนมัติ (ดู skill document-numbering)
+enum Division {
+  ADMINISTRATION
+  HR
+  FINANCE_ACCOUNTING
+  MARKETING
+  SALES
+  IT
+  CUSTOMER_SERVICE
+}
+
 enum Priority {
   NORMAL
   URGENT
   VERY_URGENT
   IMMEDIATE
+}
+
+// ข้อความปิดท้ายก่อนช่องลงนาม ค่า default ขึ้นกับ DocumentType.layout ที่เลือกตอนสร้างเอกสาร
+// (ดู .claude/skills/official-document-template/SKILL.md ส่วน "บันทึกข้อความ (variant)")
+enum ClosingText {
+  THANK_YOU_INFORM // "จึงเรียนมาเพื่อทราบ และดำเนินการตามอำนาจและหน้าที่ต่อไป" — default ของ layout MEMO
+  RESPECTFULLY // "ขอแสดงความนับถือ" — default ของ layout OFFICIAL_LETTER
+}
+
+// รูปแบบเอกสารที่ต้องใช้ตอน render/print — เป็น source of truth เดียวสำหรับเลือก layout
+// และ default closingText แทนการเทียบ DocumentType.code ตรงๆ ในโค้ด (ดู security-review 2026-07-11)
+enum DocumentLayout {
+  OFFICIAL_LETTER
+  MEMO
 }
 
 enum DocumentStatus {
@@ -51,15 +83,20 @@ enum AuditAction {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
+  id             String       @id @default(cuid())
+  email          String       @unique
   passwordHash   String
-  name           String
-  role           Role     @default(SARABAN)
+  name           String // ชื่อเต็มคำนวณจาก titlePrefix+firstName+lastName เก็บไว้ใช้แสดงผลจุดอื่นในระบบ (เอกสาร, sidebar, audit log ฯลฯ)
+  titlePrefix    TitlePrefix?
+  firstName      String?
+  lastName       String?
+  division       Division? // ฝ่ายงาน (ข้อมูลทำเนียบผู้ใช้งาน) — nullable เพื่อไม่กระทบบัญชีเดิมที่มีอยู่ก่อน field นี้
+  position       String? // ตำแหน่งงาน ใช้เติมอัตโนมัติในช่อง "ตำแหน่งผู้ลงนาม" ของเอกสารได้ในอนาคต
+  role           Role         @default(SARABAN)
   departmentCode String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   createdDocuments  Document[]   @relation("DocumentCreatedBy")
   approvedDocuments Document[]   @relation("DocumentApprovedBy")
@@ -69,13 +106,14 @@ model User {
 }
 
 model DocumentType {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  code        String   @unique
+  id          String         @id @default(cuid())
+  name        String         @unique
+  code        String         @unique
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  layout      DocumentLayout @default(OFFICIAL_LETTER) // ตัดสิน layout/closingText default — ไม่ผูกกับ code
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   documents Document[]
 }
@@ -84,6 +122,7 @@ model Document {
   id                String         @id @default(cuid())
   documentNumber    String         @unique
   departmentCode    String
+  departmentName    String? // ชื่อเต็มส่วนราชการ + เบอร์โทร แสดงที่หัวเอกสาร คนละความหมายกับ departmentCode (ใช้ในเลขที่เอกสารอัตโนมัติ)
   documentTypeId    String
   documentTypeCode  String
   buddhistYear      Int
@@ -95,6 +134,7 @@ model Document {
   sender            String
   referenceNumber   String?
   content           String
+  closingText       ClosingText?   @default(RESPECTFULLY)
   status            DocumentStatus @default(DRAFT)
   signerName        String?
   signerPosition    String?

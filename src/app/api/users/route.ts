@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/authorize";
 import { createUserSchema, listUsersQuerySchema } from "@/lib/validations/user";
 import { logAction } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
+import { TITLE_PREFIX_LABELS } from "@/lib/labels";
 
 const userListSelect = {
   id: true,
@@ -14,6 +15,11 @@ const userListSelect = {
   email: true,
   role: true,
   departmentCode: true,
+  titlePrefix: true,
+  firstName: true,
+  lastName: true,
+  division: true,
+  position: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -103,14 +109,20 @@ export async function POST(request: NextRequest) {
   }
 
   const passwordHash = await bcrypt.hash(input.password, 10);
+  const fullName = `${TITLE_PREFIX_LABELS[input.titlePrefix]}${input.firstName} ${input.lastName}`;
 
   try {
     const user = await prisma.user.create({
       data: {
-        name: input.name,
+        name: fullName,
+        titlePrefix: input.titlePrefix,
+        firstName: input.firstName,
+        lastName: input.lastName,
         email: input.email,
         passwordHash,
         role: input.role,
+        division: input.division,
+        position: input.position,
         departmentCode: input.departmentCode,
       },
       select: userListSelect,

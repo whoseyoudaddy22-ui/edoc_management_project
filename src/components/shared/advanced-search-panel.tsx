@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -90,25 +91,26 @@ export function AdvancedSearchPanel({
         <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="flex flex-col gap-2">
             <Label>ประเภทเอกสาร</Label>
-            <div className="flex max-h-32 flex-col gap-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2">
+            <div className="flex max-h-32 flex-col gap-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-card p-2">
               {documentTypes.length === 0 ? (
-                <p className="text-sm text-gray-400">ไม่มีประเภทเอกสาร</p>
+                <p className="text-sm text-muted-foreground">ไม่มีประเภทเอกสาร</p>
               ) : (
                 documentTypes.map((type) => (
-                  <label key={type.code} className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      className="accent-blue-600"
+                  <div key={type.code} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`type-${type.code}`}
                       checked={filters.documentTypeCodes.includes(type.code)}
-                      onChange={() =>
+                      onCheckedChange={() =>
                         update(
                           "documentTypeCodes",
                           toggleValue(filters.documentTypeCodes, type.code)
                         )
                       }
                     />
-                    {type.name}
-                  </label>
+                    <Label htmlFor={`type-${type.code}`} className="text-sm font-normal text-foreground">
+                      {type.name}
+                    </Label>
+                  </div>
                 ))
               )}
             </div>
@@ -116,58 +118,61 @@ export function AdvancedSearchPanel({
 
           <div className="flex flex-col gap-2">
             <Label>สถานะ</Label>
-            <div className="flex flex-col gap-1.5 rounded-lg border border-gray-200 bg-white p-2">
+            <div className="flex flex-col gap-1.5 rounded-lg border border-gray-200 bg-card p-2">
               {Object.values(DocumentStatus).map((status) => (
-                <label key={status} className="flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    className="accent-blue-600"
+                <div key={status} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`status-${status}`}
                     checked={filters.statuses.includes(status)}
-                    onChange={() => update("statuses", toggleValue(filters.statuses, status))}
+                    onCheckedChange={() => update("statuses", toggleValue(filters.statuses, status))}
                   />
-                  {STATUS_LABEL[status]}
-                </label>
+                  <Label htmlFor={`status-${status}`} className="text-sm font-normal text-foreground">
+                    {STATUS_LABEL[status]}
+                  </Label>
+                </div>
               ))}
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
             <Label>ระดับความเร่งด่วน</Label>
-            <div className="flex flex-col gap-1.5 rounded-lg border border-gray-200 bg-white p-2">
+            <div className="flex flex-col gap-1.5 rounded-lg border border-gray-200 bg-card p-2">
               {Object.values(Priority).map((priority) => (
-                <label key={priority} className="flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    className="accent-blue-600"
+                <div key={priority} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`priority-${priority}`}
                     checked={filters.priorities.includes(priority)}
-                    onChange={() =>
+                    onCheckedChange={() =>
                       update("priorities", toggleValue(filters.priorities, priority))
                     }
                   />
-                  {PRIORITY_LABELS[priority]}
-                </label>
+                  <Label htmlFor={`priority-${priority}`} className="text-sm font-normal text-foreground">
+                    {PRIORITY_LABELS[priority]}
+                  </Label>
+                </div>
               ))}
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
             <Label>ผู้สร้างเอกสาร</Label>
-            <div className="flex max-h-32 flex-col gap-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2">
+            <div className="flex max-h-32 flex-col gap-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-card p-2">
               {users.length === 0 ? (
-                <p className="text-sm text-gray-400">ไม่มีผู้ใช้งาน</p>
+                <p className="text-sm text-muted-foreground">ไม่มีผู้ใช้งาน</p>
               ) : (
                 users.map((user) => (
-                  <label key={user.id} className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      className="accent-blue-600"
+                  <div key={user.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`creator-${user.id}`}
                       checked={filters.createdByIds.includes(user.id)}
-                      onChange={() =>
+                      onCheckedChange={() =>
                         update("createdByIds", toggleValue(filters.createdByIds, user.id))
                       }
                     />
-                    {user.name}
-                  </label>
+                    <Label htmlFor={`creator-${user.id}`} className="text-sm font-normal text-foreground">
+                      {user.name}
+                    </Label>
+                  </div>
                 ))
               )}
             </div>
@@ -175,22 +180,23 @@ export function AdvancedSearchPanel({
 
           <div className="flex flex-col gap-2">
             <Label>หน่วยงาน/แผนก</Label>
-            <div className="flex max-h-32 flex-col gap-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2">
+            <div className="flex max-h-32 flex-col gap-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-card p-2">
               {departmentCodes.length === 0 ? (
-                <p className="text-sm text-gray-400">ไม่มีข้อมูลหน่วยงาน</p>
+                <p className="text-sm text-muted-foreground">ไม่มีข้อมูลหน่วยงาน</p>
               ) : (
                 departmentCodes.map((code) => (
-                  <label key={code} className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      className="accent-blue-600"
+                  <div key={code} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`dept-${code}`}
                       checked={filters.departmentCodes.includes(code)}
-                      onChange={() =>
+                      onCheckedChange={() =>
                         update("departmentCodes", toggleValue(filters.departmentCodes, code))
                       }
                     />
-                    {code}
-                  </label>
+                    <Label htmlFor={`dept-${code}`} className="text-sm font-normal text-foreground">
+                      {code}
+                    </Label>
+                  </div>
                 ))
               )}
             </div>
@@ -204,7 +210,7 @@ export function AdvancedSearchPanel({
                 value={filters.dateFrom}
                 onChange={(e) => update("dateFrom", e.target.value)}
               />
-              <span className="text-sm text-gray-400">ถึง</span>
+              <span className="text-sm text-muted-foreground">ถึง</span>
               <Input
                 type="date"
                 value={filters.dateTo}

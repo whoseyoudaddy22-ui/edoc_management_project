@@ -17,8 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createDocumentSchema } from "@/lib/validations/document";
-import { PRIORITY_LABELS } from "@/lib/labels";
-import { Priority } from "@/generated/prisma/enums";
+import { CLOSING_TEXT_LABELS, PRIORITY_LABELS, getDefaultClosingText } from "@/lib/labels";
+import { ClosingText, DocumentLayout, Priority } from "@/generated/prisma/enums";
 
 function todayAsInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -31,7 +31,7 @@ function getCurrentBuddhistYear() {
 export function DocumentCreateForm({
   documentTypes,
 }: {
-  documentTypes: { id: string; name: string; code: string }[];
+  documentTypes: { id: string; name: string; code: string; layout: DocumentLayout }[];
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdDocumentNumber, setCreatedDocumentNumber] = useState<string | null>(null);
@@ -41,7 +41,8 @@ export function DocumentCreateForm({
     handleSubmit,
     reset,
     control,
-    formState: { errors, isSubmitting },
+    setValue,
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     resolver: zodResolver(createDocumentSchema),
     defaultValues: {
@@ -51,8 +52,10 @@ export function DocumentCreateForm({
       title: "",
       recipient: "",
       sender: "",
+      departmentName: "",
       referenceNumber: "",
       content: "",
+      closingText: ClosingText.RESPECTFULLY,
     },
   });
 
@@ -79,8 +82,10 @@ export function DocumentCreateForm({
         title: "",
         recipient: "",
         sender: "",
+        departmentName: "",
         referenceNumber: "",
         content: "",
+        closingText: ClosingText.RESPECTFULLY,
       });
     } catch {
       setSubmitError("เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง");
@@ -149,7 +154,14 @@ export function DocumentCreateForm({
                 render={({ field }) => (
                   <Select
                     value={field.value}
-                    onValueChange={(value) => value && field.onChange(value)}
+                    onValueChange={(value) => {
+                      if (!value) return;
+                      field.onChange(value);
+                      const selectedType = documentTypes.find((type) => type.id === value);
+                      if (selectedType && !dirtyFields.closingText) {
+                        setValue("closingText", getDefaultClosingText(selectedType.layout));
+                      }
+                    }}
                   >
                     <SelectTrigger id="documentTypeId" className="w-full">
                       <SelectValue placeholder="เลือกประเภทเอกสาร">
@@ -236,6 +248,18 @@ export function DocumentCreateForm({
             </div>
 
             <div className="flex flex-col gap-1.5 md:col-span-2">
+              <Label htmlFor="departmentName">ส่วนราชการ</Label>
+              <Input
+                id="departmentName"
+                placeholder="เช่น กองพัสดุฯ องค์การบริหารส่วนจังหวัดพิษณุโลก โทร.0-5598-7718-20 ต่อ 800"
+                {...register("departmentName")}
+              />
+              {errors.departmentName && (
+                <p className="text-xs text-red-600">{errors.departmentName.message}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5 md:col-span-2">
               <Label htmlFor="referenceNumber">อ้างอิง</Label>
               <Input id="referenceNumber" {...register("referenceNumber")} />
               {errors.referenceNumber && (
@@ -252,7 +276,7 @@ export function DocumentCreateForm({
               เนื้อหาเอกสาร
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="content">
                 เนื้อหา <span className="text-red-500">*</span>
@@ -260,6 +284,33 @@ export function DocumentCreateForm({
               <Textarea id="content" rows={8} {...register("content")} />
               {errors.content && (
                 <p className="text-xs text-red-600">{errors.content.message}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="closingText">ข้อความปิดท้าย</Label>
+              <Controller
+                control={control}
+                name="closingText"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={(value) => value && field.onChange(value)}>
+                    <SelectTrigger id="closingText" className="w-full">
+                      <SelectValue placeholder="เลือกข้อความปิดท้าย">
+                        {(value: ClosingText | null) => (value ? CLOSING_TEXT_LABELS[value] : "เลือกข้อความปิดท้าย")}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(ClosingText).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {CLOSING_TEXT_LABELS[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.closingText && (
+                <p className="text-xs text-red-600">{errors.closingText.message}</p>
               )}
             </div>
           </CardContent>

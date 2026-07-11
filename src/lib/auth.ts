@@ -13,6 +13,11 @@ export class AccountLockedError extends CredentialsSignin {
   code = "account_locked";
 }
 
+// hash คงที่ของ placeholder ที่ไม่ใช่รหัสผ่านจริงของใคร ใช้เทียบเวลาไม่พบ user/inactive เท่านั้น
+// เพื่อให้ authorize() ใช้เวลาใกล้เคียงกับกรณี "พบ user แต่รหัสผ่านผิด" เสมอ ป้องกัน timing
+// side-channel ที่เอาไปเดาว่าอีเมลไหนมีอยู่จริงในระบบได้ (CWE-208)
+const DUMMY_PASSWORD_HASH = "$2b$10$Ao0pGDWtLXLYvsWDygxkdOePXlVWdnLLp44tCqSPeZABwI2rSlrLS";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -31,6 +36,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !user.isActive) {
+          // เทียบกับ dummy hash เสมอแม้ไม่พบ user/inactive เพื่อไม่ให้ response time ต่างจาก
+          // เคส "พบ user แต่รหัสผ่านผิด" ด้านล่าง (ป้องกัน timing-based user enumeration)
+          await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+
           // ไม่พบผู้ใช้เลยไม่มี performedBy ที่ valid ให้บันทึก (AuditLog.performedBy เป็น FK ไป User)
           // แต่ถ้าเป็นบัญชีที่ถูกปิดใช้งาน (มี user แต่ isActive=false) ยังบันทึกได้เพราะมี id จริง
           if (user) {

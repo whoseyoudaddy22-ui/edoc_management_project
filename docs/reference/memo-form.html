@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>บันทึกข้อความ - แบบฟอร์ม</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: #e9eaec;
+    font-family: 'Sarabun', 'TH Sarabun New', 'TH Sarabun PSK', sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 32px 12px;
+    margin: 0;
+  }
+
+  /* ===== หน้ากระดาษ A4 ===== */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #ffffff;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+    padding: 2.5cm 2cm 2cm 3cm;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== ส่วนหัว ===== */
+  .doc-header {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    align-items: center;
+    column-gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .emblem {
+    width: 72px;
+    height: 72px;
+    border: 1.5px dashed #9aa0a6;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #8a8f96;
+    text-align: center;
+    line-height: 1.3;
+    user-select: none;
+  }
+
+  .doc-title {
+    font-size: 26pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #1a1a1a;
+  }
+
+  hr.title-rule {
+    border: none;
+    border-top: 2px solid #1a1a1a;
+    margin: 4px 0 20px 0;
+  }
+
+  /* ===== แถวข้อมูลหลัก (label ชิดซ้าย + เส้นกรอกข้อมูล) ===== */
+  .field-row {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-items: baseline;
+    column-gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .field-label {
+    font-size: 16pt;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .field-input {
+    font-family: inherit;
+    font-size: 16pt;
+    border: none;
+    border-bottom: 1px dotted #666;
+    background: transparent;
+    padding: 2px 4px;
+    width: 100%;
+    color: #111;
+  }
+  .field-input:focus {
+    outline: none;
+    border-bottom: 1px solid #2b5fb8;
+    background: #f3f7ff;
+  }
+
+  /* ===== แถวที่ / วันที่ อยู่คู่กัน ===== */
+  .row-split {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 14px;
+  }
+  .row-split .field-row {
+    margin-bottom: 0;
+  }
+  .row-split .col-ref  { flex: 1.1; }
+  .row-split .col-date { flex: 1; }
+
+  /* ===== เรียน ===== */
+  .field-plain {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    margin-bottom: 18px;
+  }
+  .field-plain .field-label { font-weight: 700; }
+  .field-plain .field-input { border-bottom: 1px dotted #666; }
+
+  /* ===== เนื้อความ ===== */
+  .body-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .body-text {
+    font-family: inherit;
+    font-size: 16pt;
+    line-height: 1.9;
+    text-indent: 2.2em;
+    border: 1px solid #d7d9dc;
+    border-radius: 6px;
+    padding: 14px 16px;
+    resize: vertical;
+    min-height: 220px;
+    background: #fbfbfc;
+  }
+  .body-text:focus {
+    outline: none;
+    border-color: #2b5fb8;
+    background: #ffffff;
+  }
+
+  .closing-line {
+    font-size: 16pt;
+    line-height: 1.9;
+    text-indent: 2.2em;
+    margin-top: 18px;
+  }
+
+  /* ===== ส่วนลงนาม ===== */
+  .signature-block {
+    align-self: flex-end;
+    text-align: center;
+    margin-top: 56px;
+    width: 260px;
+    font-size: 16pt;
+  }
+  .signature-space { height: 64px; }
+  .signature-line {
+    border-top: 1px dotted #666;
+    padding-top: 6px;
+  }
+  .signature-name  { font-weight: 600; }
+  .signature-role  { color: #444; font-size: 14pt; }
+
+  /* ===== แถบเครื่องมือ (ไม่พิมพ์ออกมา) ===== */
+  .toolbar {
+    width: 210mm;
+    max-width: 100%;
+    margin: 0 auto 14px auto;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .toolbar button {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #c7cad0;
+    background: #ffffff;
+    cursor: pointer;
+  }
+  .toolbar button:hover { background: #f1f3f5; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .toolbar { display: none; }
+    .page { box-shadow: none; margin: 0; }
+    .field-input, .body-text { border-color: transparent !important; background: transparent !important; }
+  }
+
+  @media (max-width: 860px) {
+    .page { width: 100%; padding: 20px; }
+    .row-split { flex-direction: column; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <button onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button>
+  </div>
+
+  <div class="page">
+
+    <div class="doc-header">
+      <div class="emblem">ตราครุฑ</div>
+      <div class="doc-title">บันทึกข้อความ</div>
+    </div>
+    <hr class="title-rule">
+
+    <div class="field-row">
+      <label class="field-label" for="dept">ส่วนราชการ</label>
+      <input class="field-input" id="dept" type="text"
+        value="กองพัสดุฯ องค์การบริหารส่วนจังหวัดพิษณุโลก โทร.0-5598-7718-20 ต่อ 800">
+    </div>
+
+    <div class="row-split">
+      <div class="col-ref field-row">
+        <label class="field-label" for="docno">ที่</label>
+        <input class="field-input" id="docno" type="text" value="พล 51021/">
+      </div>
+      <div class="col-date field-row">
+        <label class="field-label" for="docdate">วันที่</label>
+        <input class="field-input" id="docdate" type="text" value="พฤษภาคม 2569">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <label class="field-label" for="subject">เรื่อง</label>
+      <input class="field-input" id="subject" type="text" value="แต่งตั้งผู้ตรวจรับพัสดุ">
+    </div>
+
+    <div class="field-plain">
+      <label class="field-label" for="recipient">เรียน</label>
+      <input class="field-input" id="recipient" type="text" value="นางสาวเบญญาทิพย์ ลิ้มฉุ้น">
+    </div>
+
+    <div class="body-wrap">
+      <textarea class="body-text" id="body-content">ด้วยองค์การบริหารส่วนจังหวัดพิษณุโลก ได้จัดซื้อวัสดุคอมพิวเตอร์ จำนวน 6 รายการ (กองพัสดุและทรัพย์สิน) และได้แต่งตั้ง นางสาวเบญญาทิพย์ ลิ้มฉุ้น ตำแหน่ง เจ้าพนักงานธุรการชำนาญงาน เป็นผู้ตรวจรับพัสดุตามคำสั่งองค์การบริหารส่วนจังหวัดพิษณุโลก ที่.................../2569 ลงวันที่........................รายละเอียดตามคำสั่งที่ส่งมาพร้อมหนังสือนี้</textarea>
+
+      <p class="closing-line">จึงเรียนมาเพื่อทราบ และดำเนินการตามอำนาจและหน้าที่ต่อไป</p>
+
+      <div class="signature-block">
+        <div class="signature-space"></div>
+        <div class="signature-line">
+          <div class="signature-name">(...............................................)</div>
+          <div class="signature-role">ตำแหน่ง</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

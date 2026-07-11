@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/prisma";
-import { Role, DocumentStatus, Priority, AuditAction } from "@/generated/prisma/enums";
+import { Role, DocumentStatus, Priority, AuditAction, TitlePrefix, Division } from "@/generated/prisma/enums";
 import { deleteAuditLogsForTest } from "./db-test-helpers";
 
 // ทดสอบ "Audit log บันทึกครบทุก event ที่กำหนดไว้" ตาม module-14-testing.md > ระดับสำคัญ (Module 12)
@@ -232,10 +232,13 @@ describe("Audit log — ผู้ใช้งาน", () => {
       new NextRequest("http://localhost/api/users", {
         method: "POST",
         body: JSON.stringify({
-          name: "ผู้ใช้ทดสอบ audit log",
+          titlePrefix: TitlePrefix.MR,
+          firstName: "ผู้ใช้ทดสอบ",
+          lastName: "audit log",
           email: "audit-log-managed-user-test@organization.go.th",
           password: "Test12345",
           role: Role.VIEWER,
+          division: Division.IT,
           departmentCode: TEST_DEPARTMENT_CODE,
         }),
       })
@@ -256,7 +259,7 @@ describe("Audit log — ผู้ใช้งาน", () => {
     const response = await putUser(
       new NextRequest(`http://localhost/api/users/${managedUserId}`, {
         method: "PUT",
-        body: JSON.stringify({ name: "ผู้ใช้ทดสอบ audit log (แก้ไขแล้ว)" }),
+        body: JSON.stringify({ lastName: "audit log (แก้ไขแล้ว)" }),
       }),
       { params: Promise.resolve({ id: managedUserId }) }
     );
@@ -264,7 +267,7 @@ describe("Audit log — ผู้ใช้งาน", () => {
 
     const log = await latestAuditLog(AuditAction.USER_UPDATE, "User", managedUserId);
     expect(log).not.toBeNull();
-    expect((log?.changes as { name?: { to: string } } | null)?.name?.to).toBe("ผู้ใช้ทดสอบ audit log (แก้ไขแล้ว)");
+    expect((log?.changes as { lastName?: { to: string } } | null)?.lastName?.to).toBe("audit log (แก้ไขแล้ว)");
   });
 
   it("USER_DEACTIVATE: admin ปิดใช้งานผู้ใช้ต้องมี audit log", async () => {

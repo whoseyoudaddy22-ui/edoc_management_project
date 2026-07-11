@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 import { createDocumentWithAutoNumber } from "../src/lib/document-number";
-import { Role, DocumentStatus, Priority } from "../src/generated/prisma/enums";
+import { Role, DocumentStatus, Priority, DocumentLayout, TitlePrefix } from "../src/generated/prisma/enums";
+import { deleteAuditLogsForTest } from "../tests/db-test-helpers";
 
 // Seed สำหรับฐานข้อมูลทดสอบ (docs_management_test) เท่านั้น — ห้ามรันตรงด้วย `tsx`
 // ต้องรันผ่าน `npm run test:db:seed` ซึ่งใช้ dotenv-cli โหลด .env.test เพื่อชี้ DATABASE_URL
@@ -12,16 +13,49 @@ import { Role, DocumentStatus, Priority } from "../src/generated/prisma/enums";
 const TEST_DEPARTMENT_CODE = "ทสบ";
 const TEST_PASSWORD = "test1234";
 
+// titlePrefix/firstName/lastName ตั้งใจใส่ให้ครบ (ไม่ใช่ null) เพราะโค้ดจริง (เช่น PUT /api/users/[id])
+// มี branch ที่พฤติกรรมต่างกันระหว่าง user ที่ข้อมูลครบกับ user เก่าที่ยังไม่มี field พวกนี้
+// (ดู security-review 2026-07-11 finding #2) — name ยังคงเป็น label บทบาทเดิม ไม่ผูกกับ firstName/lastName
+// เพื่อไม่ให้ข้อความที่แสดงผลทั่วระบบ (sidebar, sender, audit log) เปลี่ยนไปจากเดิม
 const USER_SEEDS = [
-  { email: "saraban-test@organization.go.th", name: "เจ้าหน้าที่สารบรรณ (ทดสอบ)", role: Role.SARABAN },
-  { email: "admin-test@organization.go.th", name: "ผู้ดูแลระบบ (ทดสอบ)", role: Role.ADMIN },
-  { email: "approver-test@organization.go.th", name: "ผู้อนุมัติ (ทดสอบ)", role: Role.APPROVER },
-  { email: "viewer-test@organization.go.th", name: "ผู้เยี่ยมชม (ทดสอบ)", role: Role.VIEWER },
+  {
+    email: "saraban-test@organization.go.th",
+    name: "เจ้าหน้าที่สารบรรณ (ทดสอบ)",
+    role: Role.SARABAN,
+    titlePrefix: TitlePrefix.MR,
+    firstName: "ทดสอบ",
+    lastName: "สารบรรณ",
+  },
+  {
+    email: "admin-test@organization.go.th",
+    name: "ผู้ดูแลระบบ (ทดสอบ)",
+    role: Role.ADMIN,
+    titlePrefix: TitlePrefix.MR,
+    firstName: "ทดสอบ",
+    lastName: "ดูแลระบบ",
+  },
+  {
+    email: "approver-test@organization.go.th",
+    name: "ผู้อนุมัติ (ทดสอบ)",
+    role: Role.APPROVER,
+    titlePrefix: TitlePrefix.MRS,
+    firstName: "ทดสอบ",
+    lastName: "อนุมัติ",
+  },
+  {
+    email: "viewer-test@organization.go.th",
+    name: "ผู้เยี่ยมชม (ทดสอบ)",
+    role: Role.VIEWER,
+    titlePrefix: TitlePrefix.MISS,
+    firstName: "ทดสอบ",
+    lastName: "เยี่ยมชม",
+  },
 ] as const;
 
 const DOCUMENT_TYPE_SEEDS = [
-  { code: "0001", name: "หนังสือภายนอก (ทดสอบ)" },
-  { code: "0002", name: "หนังสือภายใน (ทดสอบ)" },
+  { code: "0001", name: "หนังสือภายนอก (ทดสอบ)", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0002", name: "หนังสือภายใน (ทดสอบ)", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0005", name: "บันทึกข้อความ (ทดสอบ)", layout: DocumentLayout.MEMO },
 ];
 
 function assertUsingTestDatabase() {
@@ -38,7 +72,9 @@ function assertUsingTestDatabase() {
 }
 
 async function resetDatabase() {
-  await prisma.auditLog.deleteMany();
+  // Trigger `audit_log_immutable` บล็อก DELETE บน AuditLog เสมอ — ใช้ helper กลางที่ปิด/เปิด
+  // trigger ชั่วคราวให้แล้ว (ดู tests/db-test-helpers.ts:deleteAuditLogsForTest)
+  await deleteAuditLogsForTest({});
   await prisma.attachment.deleteMany();
   await prisma.document.deleteMany();
   await prisma.user.deleteMany();
@@ -58,6 +94,9 @@ async function main() {
           passwordHash,
           name: seed.name,
           role: seed.role,
+          titlePrefix: seed.titlePrefix,
+          firstName: seed.firstName,
+          lastName: seed.lastName,
           departmentCode: TEST_DEPARTMENT_CODE,
         },
       })

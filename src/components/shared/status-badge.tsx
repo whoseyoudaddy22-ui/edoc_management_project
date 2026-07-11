@@ -10,11 +10,11 @@ export const STATUS_LABEL: Record<DocumentStatus, string> = {
 };
 
 const STATUS_CLASSNAME: Record<DocumentStatus, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  PENDING: "bg-amber-100 text-amber-800",
-  APPROVED: "bg-green-100 text-green-700",
-  REJECTED: "bg-red-100 text-red-700",
-  ARCHIVED: "bg-sky-100 text-sky-700",
+  DRAFT: "bg-status-draft-bg text-status-draft-fg",
+  PENDING: "bg-status-pending-bg text-status-pending-fg",
+  APPROVED: "bg-status-approved-bg text-status-approved-fg",
+  REJECTED: "bg-status-rejected-bg text-status-rejected-fg",
+  ARCHIVED: "bg-status-external-bg text-status-external-fg",
 };
 
 export function StatusBadge({ status }: { status: DocumentStatus }) {

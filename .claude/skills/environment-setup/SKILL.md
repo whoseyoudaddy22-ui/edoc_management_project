@@ -190,6 +190,7 @@ echo "=== Disk space ===" && df -h /
 | `npx prisma migrate status` ล้มเหลวด้วยเหตุผลเดียวกัน | ไม่มี `.env`/`DATABASE_URL` | สร้าง `.env` ตามขั้นตอนที่ 7 |
 | เว็บเข้าได้จาก host แต่เข้าจากเครื่องอื่นใน LAN ไม่ได้ | ufw ปิด port หรือ VM ตั้งเป็น NAT แทน Bridged Adapter | ตรวจ `sudo ufw status` และ Network setting ใน VirtualBox |
 | เอกสาร/log มี timestamp ผิดเพี้ยน | ไม่ได้ตั้ง chrony/timezone ตั้งแต่ต้น | รันขั้นตอนที่ 2 แล้ว restart service ที่เกี่ยวข้อง |
+| รัน `npm run dev:ui-test` (port 3001) พร้อม dev server หลัก (port 3000) แล้วเงียบ/ขึ้น `Another next dev server is already running` | Next.js ห้ามรัน `next dev` สองตัวพร้อมกันในโปรเจกต์เดียวกัน แม้คนละ port เพราะใช้ `.next` build cache ร่วมกัน | ต้องมี `NEXT_DIST_DIR=.next-test` ใน `.env.test` (ให้ `next.config.ts` แยก `distDir` ไปคนละที่กับ instance หลัก) — ถ้า `.env.test` ถูกสร้างใหม่ (ไฟล์นี้ไม่ได้ commit เข้า git) ต้องเติมบรรทัดนี้กลับเข้าไปด้วยเสมอ |
 
 ## Testing Checklist ของ Skill นี้เอง
 

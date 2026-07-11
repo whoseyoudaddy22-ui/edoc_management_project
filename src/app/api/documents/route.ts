@@ -4,6 +4,7 @@ import type { Document } from "@/generated/prisma/client";
 import { createDocumentWithAutoNumber } from "@/lib/document-number";
 import { createDocumentSchema } from "@/lib/validations/document";
 import { requireRole } from "@/lib/authorize";
+import { getDefaultClosingText } from "@/lib/labels";
 import { Role } from "@/generated/prisma/enums";
 import { logAction } from "@/lib/audit";
 import { AuditAction } from "@/generated/prisma/enums";
@@ -82,8 +83,12 @@ export async function POST(request: NextRequest) {
         priority: input.priority,
         recipient: input.recipient,
         sender: input.sender,
+        departmentName: input.departmentName,
         referenceNumber: input.referenceNumber,
         content: input.content,
+        // ถ้า client ไม่ส่ง closingText มา ใช้ default ตามประเภทเอกสาร (memo -> จึงเรียนมาเพื่อทราบฯ)
+        // ตัดสินที่ server เสมอ ไม่พึ่ง default ฝั่งฟอร์ม เผื่อกรณีเรียก API ตรง
+        closingText: input.closingText ?? getDefaultClosingText(documentType.layout),
         signerName: input.signerName,
         signerPosition: input.signerPosition,
         documentType: { connect: { id: documentType.id } },

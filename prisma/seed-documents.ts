@@ -2,7 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 import { createDocumentWithAutoNumber } from "../src/lib/document-number";
-import { DocumentStatus, Priority } from "../src/generated/prisma/enums";
+import { DocumentStatus, Priority, DocumentLayout } from "../src/generated/prisma/enums";
 
 // สร้างข้อมูลทดสอบเอกสารจำนวนมาก สำหรับทดสอบ multi-criteria search / pagination
 // ตาม Testing Checklist ใน docs/modules/module-11-metadata-search.md
@@ -10,10 +10,11 @@ import { DocumentStatus, Priority } from "../src/generated/prisma/enums";
 const TOTAL_DOCUMENTS = 120;
 
 const DOCUMENT_TYPE_SEEDS = [
-  { code: "0001", name: "หนังสือภายนอก" },
-  { code: "0002", name: "หนังสือภายใน" },
-  { code: "0003", name: "คำสั่ง" },
-  { code: "0004", name: "ประกาศ" },
+  { code: "0001", name: "หนังสือภายนอก", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0002", name: "หนังสือภายใน", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0003", name: "คำสั่ง", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0004", name: "ประกาศ", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0005", name: "บันทึกข้อความ", layout: DocumentLayout.MEMO },
 ];
 
 const USER_SEEDS = [

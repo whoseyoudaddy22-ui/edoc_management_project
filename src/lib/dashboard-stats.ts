@@ -36,6 +36,7 @@ export async function getDashboardStats() {
     const type = documentTypes.find((t) => t.id === item.documentTypeId);
     return {
       documentTypeId: item.documentTypeId,
+      documentTypeCode: type?.code ?? "",
       name: type?.name ?? "ไม่ระบุประเภท",
       count: item._count._all,
       percentage:

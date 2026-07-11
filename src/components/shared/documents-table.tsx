@@ -2,11 +2,22 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Eye, Printer, Trash2, ChevronLeft, ChevronRight, FilePlus, X } from "lucide-react";
+import {
+  Search,
+  Eye,
+  Printer,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  FilePlus,
+  X,
+  AlertCircle,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge, STATUS_LABEL } from "@/components/shared/status-badge";
 import {
   AdvancedSearchPanel,
@@ -40,15 +51,20 @@ export function DocumentsTable({
   documentTypes,
   users,
   departmentCodes,
+  initialDocumentTypeCodes = [],
 }: {
   documentTypes: DocumentTypeOption[];
   users: UserOption[];
   departmentCodes: string[];
+  initialDocumentTypeCodes?: string[];
 }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [filters, setFilters] = useState<AdvancedSearchFilters>(EMPTY_ADVANCED_FILTERS);
+  const [advancedOpen, setAdvancedOpen] = useState(initialDocumentTypeCodes.length > 0);
+  const [filters, setFilters] = useState<AdvancedSearchFilters>({
+    ...EMPTY_ADVANCED_FILTERS,
+    documentTypeCodes: initialDocumentTypeCodes,
+  });
   const [debouncedReferenceNumber, setDebouncedReferenceNumber] = useState("");
   const [page, setPage] = useState(1);
 
@@ -269,7 +285,7 @@ export function DocumentsTable({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">เอกสารทั้งหมด</h1>
+        <h1 className="text-xl font-semibold text-foreground">เอกสารทั้งหมด</h1>
         <Button nativeButton={false} render={<Link href="/documents/create" />}>
           <FilePlus className="h-4 w-4" />
           สร้างเอกสาร
@@ -280,7 +296,7 @@ export function DocumentsTable({
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => {
@@ -312,7 +328,7 @@ export function DocumentsTable({
                     type="button"
                     onClick={chip.onRemove}
                     aria-label={`ลบเงื่อนไข ${chip.label}`}
-                    className="rounded-full hover:bg-black/10"
+                    className="rounded-full hover:bg-foreground/10"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -322,15 +338,16 @@ export function DocumentsTable({
           )}
 
           {error && (
-            <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </p>
+            <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
+              <AlertCircle />
+              <AlertTitle>{error}</AlertTitle>
+            </Alert>
           )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-xs font-medium text-gray-500 uppercase">
+                <tr className="border-b border-gray-200 text-xs font-medium text-muted-foreground uppercase">
                   <th className="py-2 pr-4">เลขที่เอกสาร</th>
                   <th className="py-2 pr-4">ชื่อเรื่อง</th>
                   <th className="py-2 pr-4">ประเภท</th>
@@ -342,25 +359,25 @@ export function DocumentsTable({
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-sm text-gray-500">
+                    <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
                       กำลังโหลดข้อมูล...
                     </td>
                   </tr>
                 ) : documents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-sm text-gray-500">
+                    <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
                       ไม่พบเอกสารที่ตรงกับเงื่อนไข
                     </td>
                   </tr>
                 ) : (
                   documents.map((doc) => (
                     <tr key={doc.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                      <td className="py-3 pr-4 whitespace-nowrap text-gray-900">
+                      <td className="py-3 pr-4 whitespace-nowrap text-foreground">
                         {doc.documentNumber}
                       </td>
-                      <td className="py-3 pr-4 max-w-xs truncate text-gray-900">{doc.title}</td>
-                      <td className="py-3 pr-4 text-gray-600">{doc.documentType.name}</td>
-                      <td className="py-3 pr-4 whitespace-nowrap text-gray-600">
+                      <td className="py-3 pr-4 max-w-xs truncate text-foreground">{doc.title}</td>
+                      <td className="py-3 pr-4 text-muted-foreground">{doc.documentType.name}</td>
+                      <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground">
                         {dateFormatter.format(new Date(doc.documentDate))}
                       </td>
                       <td className="py-3 pr-4">
@@ -404,7 +421,7 @@ export function DocumentsTable({
             </table>
           </div>
 
-          <div className="flex items-center justify-between border-t border-gray-100 pt-4 text-sm text-gray-600">
+          <div className="flex items-center justify-between border-t border-gray-100 pt-4 text-sm text-muted-foreground">
             <p>
               ทั้งหมด {total} รายการ · หน้า {page} จาก {totalPages}
             </p>
