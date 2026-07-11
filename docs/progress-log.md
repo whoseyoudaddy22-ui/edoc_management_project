@@ -47,3 +47,26 @@
 ### เข้าใช้งานระบบตอนนี้
 - Production จริง: `https://192.168.1.155` (self-signed cert เตือนครั้งแรก กด Advanced → Proceed) — บัญชี admin/audit จริงคนละรหัสกับ dev, บัญชีอาจารย์ทดสอบ 4 role (`*@test.com` / `Test1234`) ก็ล็อกอินผ่าน URL นี้ได้เหมือนกัน
 - ถ้าเครื่อง reboot ไปแล้วอยากกลับมาที่ session แชทนี้: `cd` เข้าโฟลเดอร์โปรเจกต์แล้วรัน `claude --continue`
+
+## 2026-07-11
+
+Deploy โค้ดล่าสุดจาก `master` ขึ้น production จริง แล้วรัน security testing เต็มรูป 8 scenario ตาม skill `kali-security-testing`
+
+- **Pull ค้าง 34 commits จาก origin/master:** local เคย "ahead 1 commit" อยู่ก่อนหน้า แต่จริงๆ origin ไปไกลกว่ามาก (merge branch `feature/ui-redesign` เข้า master แล้ว) ได้ของใหม่มาด้วย: skill `ubuntu-server-ops` และ `kali-security-testing` (ที่ก่อนหน้านี้เข้าใจผิดว่าไม่มีอยู่จริง), migration ใหม่ 3 ตัว (`add_user_profile_fields`, `add_memo_closing_text_department_name`, `add_document_type_layout`), และโค้ดหน้าบ้าน/หลังบ้านอีกจำนวนมาก
+- **Deploy production ตาม playbook ของ `ubuntu-server-ops` (หัวข้อ 6):** backup DB (`docs_management_prod`) → tag image เดิมเป็น known-good (`edoc-app:pre-deploy-...`) → migrate → build+up → verify
+  - **เจอบั๊ก build-blocking ระหว่างทาง:** `.dockerignore` กัน `tests/` ทั้งโฟลเดอร์ออกจาก Docker build context แต่ `prisma/seed-test.ts` (ถูกกวาดเข้า typecheck ของ `next build` เพราะ `tsconfig.json` include `**/*.ts`) import `../tests/db-test-helpers` อยู่ → build ล้มเหลวทุกครั้งที่รันใน Docker (แต่ผ่านปกตินอก Docker เพราะไฟล์มีอยู่จริงบน host) — แก้โดยลบ `tests` ออกจาก `.dockerignore` (commit `02968d1`) ไม่กระทบ image สุดท้ายเพราะ runner stage ของ `Dockerfile` copy เฉพาะ path ที่ระบุไว้เท่านั้น ไม่รวม `tests/`
+  - Deploy สำเร็จ ยืนยันด้วย login จริงผ่าน `https://192.168.1.155` (ได้ session จริง, `/dashboard` 200, ไม่มี error ใน `docker logs docs-app`)
+- **Security testing 8/8 scenario ผ่าน `localhost:3001` (`docs_management_test`):**
+  - ก่อนเริ่มทดสอบต้องแก้ 2 ปัญหาของ test env ที่ไม่เกี่ยวกับ deploy: (1) Prisma client บน host ค้าง schema เก่า (ต้อง `npx prisma generate` ใหม่) (2) `docs_management_test` เองก็ยังไม่เคย apply migration 3 ตัวใหม่เหมือนกัน (ต้อง `npm run test:db:migrate` แยกจาก prod)
+  - ผลสรุป: **7/8 scenario ไม่พบช่องโหว่** (Broken Access Control, IDOR, SQL Injection ผ่าน `sqlmap`, Unrestricted File Upload, Document Numbering Race Condition ยิง 20 concurrent requests ไม่ซ้ำเลขเลย, Audit Log Immutability ทั้งระดับ API และ DB trigger)
+  - **พบช่องโหว่จริง 1 รายการ (Medium, CWE-613):** session ไม่ถูก revoke หลัง logout เพราะ NextAuth ใช้ `session.strategy: "jwt"` แบบ stateless — token ที่ capture ไว้ก่อน logout ยังเข้า `/dashboard` ได้ปกติหลัง logout ไปแล้วจริง (ทดสอบยืนยันด้วย raw token replay ไม่ผ่าน cookie jar) ยังไม่ได้แก้ รอตัดสินใจว่าจะทำก่อน go-live เต็มรูปไหม
+  - รายงานฉบับเต็มอยู่ใน Claude artifact (ลิงก์ในบทสนทนา ไม่ได้ commit เข้า repo)
+- **ปิด TODO ค้างนาน — GitHub push:** พบว่าเครื่องนี้ไม่เคยตั้ง git credential helper เลยตั้งแต่ต้น (ไม่มี `credential.helper`, ไม่มี `~/.git-credentials`) ทำให้ push ทุกครั้งต้อง auth แบบ interactive และล้มเหลวในเซสชันที่ไม่มี TTY ซ้ำๆ — แก้โดยติดตั้ง `gh` CLI แล้ว `gh auth login` + `gh auth setup-git` ผูก credential helper ระดับเครื่อง ปิดรายการ "Revoke GitHub PAT / เปลี่ยนไปใช้ gh auth login" ที่ค้างมาตั้งแต่ 2026-07-06 ได้แล้ว
+
+### ยังไม่ได้ทำ (อัปเดต)
+- [x] Revoke GitHub PAT เก่า / เปลี่ยนไปใช้ `gh auth login` (2026-07-11)
+- [ ] **แก้ช่องโหว่ session revocation หลัง logout** (พบใหม่วันนี้, Medium) — เพิ่ม `sessionInvalidatedAt`/`tokenVersion` เช็คใน `jwt` callback หรือเปลี่ยนเป็น `session.strategy: "database"`
+- [ ] ตั้ง DHCP reservation ที่ router
+- [ ] อัปเดต `docs/runbooks/disaster-recovery.md` (ยังอ้างอิงเครื่อง Windows เดิม)
+- [ ] ตรวจสอบ "ประวัติการทดสอบ Runbook" ท้าย `disaster-recovery.md`
+- [ ] (เสริม ไม่เร่งด่วน) เพิ่ม Content-Security-Policy header, sanitize `Attachment.fileName` ก่อนบันทึก DB — จากรายงาน security testing วันนี้
