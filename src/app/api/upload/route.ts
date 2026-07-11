@@ -10,6 +10,7 @@ import {
   isAllowedFileExtension,
   isDangerousFileContent,
   matchesDeclaredFileType,
+  sanitizeFileName,
 } from "@/lib/upload";
 import { requireAuth, requireRole } from "@/lib/authorize";
 import { Role } from "@/generated/prisma/enums";
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
         return prisma.attachment.create({
           data: {
             documentId,
-            fileName: file.name,
+            fileName: sanitizeFileName(file.name),
             filePath: `/uploads/${documentId}/${storedFileName}`,
             fileType: extension.replace(".", ""),
             fileSize: file.size,

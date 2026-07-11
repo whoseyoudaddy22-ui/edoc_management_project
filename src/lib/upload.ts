@@ -74,3 +74,30 @@ const DANGEROUS_SIGNATURES: ((buffer: Buffer) => boolean)[] = [
 export function isDangerousFileContent(buffer: Buffer): boolean {
   return DANGEROUS_SIGNATURES.some((check) => check(buffer));
 }
+
+const MAX_DISPLAY_FILE_NAME_LENGTH = 255;
+
+// ชื่อไฟล์ต้นฉบับที่ผู้ใช้อัปโหลด (Attachment.fileName) ใช้แค่แสดงผล ไม่เคยถูกใช้เป็น path จริงบนดิสก์
+// (ไฟล์จริงถูกเขียนด้วยชื่อจาก randomUUID() เสมอ ดู route.ts) แต่ก็ยัง sanitize ก่อนเก็บ DB เพื่อกัน
+// control character / bidi override character (ใช้หลอกนามสกุลไฟล์ เช่น RTLO spoofing) และจำกัดความยาว
+// ไม่ให้ค่าที่แปลกประหลาดหลุดเข้าไปอยู่ใน DB/Audit Log แบบดิบๆ (จากรายงาน security testing 2026-07-11)
+// รายการ Unicode code point (เลขฐาน 16 ล้วน ไม่มีอักขระพิเศษฝังในซอร์สไฟล์นี้เลย) ที่ตัดทิ้งจากชื่อไฟล์:
+// 0x200e/0x200f = LEFT/RIGHT-TO-LEFT MARK, 0x202a-0x202e = LRE/RLE/PDF/LRO/RLO,
+// 0x2066-0x2069 = LRI/RLI/FSI/PDI — กลุ่ม LRO/RLO คือมุก "RTLO spoofing" ที่ทำให้ชื่อไฟล์
+// ที่อัปโหลดจริงเป็นนามสกุลอันตราย แสดงผลกลับด้านเป็นนามสกุลที่ดูปลอดภัยแทน
+const BIDI_OVERRIDE_CODE_POINTS = new Set<number>([
+  0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
+]);
+
+function isControlOrBidiChar(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0;
+  return code <= 0x1f || code === 0x7f || BIDI_OVERRIDE_CODE_POINTS.has(code);
+}
+
+export function sanitizeFileName(fileName: string): string {
+  const withoutControlChars = Array.from(fileName)
+    .filter((char) => !isControlOrBidiChar(char))
+    .join("");
+  const trimmed = withoutControlChars.trim();
+  return trimmed.slice(0, MAX_DISPLAY_FILE_NAME_LENGTH) || "unnamed";
+}

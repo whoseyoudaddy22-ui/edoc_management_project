@@ -17,6 +17,25 @@ const nextConfig: NextConfig = {
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
           // เอกสารในระบบนี้เป็นข้อมูลภายในหน่วยงาน ไม่ต้องมี cross-origin permission เพิ่มเติมใดๆ
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // จำกัดทุก resource ให้โหลดจาก origin เดียวกันเท่านั้น (ไม่มี CDN/analytics ภายนอกในระบบนี้)
+          // 'unsafe-inline' ใน script-src/style-src ยังจำเป็นเพราะยังไม่ได้ตั้ง nonce-based CSP
+          // ผ่าน proxy.ts (Next.js hydration script + Tailwind บาง utility ต้องใช้ inline) — แผนถัดไป
+          // ถ้าจะรัดกุมกว่านี้คือเปลี่ยนเป็น nonce แทน ไม่ใช่ปล่อย unsafe-inline ถาวร
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data:",
+              "font-src 'self'",
+              "connect-src 'self'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+            ].join("; "),
+          },
         ],
       },
     ];
