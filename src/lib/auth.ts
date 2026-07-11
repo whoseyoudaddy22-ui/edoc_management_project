@@ -92,6 +92,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const token = "token" in message ? (message.token as JWT | null) : undefined;
       if (!token?.id) return;
 
+      // Revoke the token being signed out of (and any other stale token for this user)
+      // by moving the cutoff past its `iat` — see jwt() in auth.config.ts. Fixes session
+      // replay after logout (security-review 2026-07-11, CWE-613).
+      await prisma.user.update({
+        where: { id: token.id },
+        data: { sessionInvalidatedAt: new Date() },
+      });
+
       await logAction({
         action: AuditAction.USER_LOGOUT,
         performedBy: token.id,

@@ -95,6 +95,10 @@ model User {
   role           Role         @default(SARABAN)
   departmentCode String?
   isActive       Boolean      @default(true)
+  // ตั้งเป็นเวลาปัจจุบันทุกครั้งที่ logout เพื่อเช็คใน jwt() callback (auth.config.ts) ว่า token ที่ถืออยู่
+  // ถูกออกก่อนเวลานี้หรือไม่ (เทียบกับ token.iat) — ถ้าใช่คือ token เก่าที่ถูก revoke ไปแล้ว แก้ปัญหา
+  // session ไม่ถูก revoke จริงหลัง logout เพราะ next-auth ใช้ JWT strategy แบบ stateless (CWE-613)
+  sessionInvalidatedAt DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
