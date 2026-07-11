@@ -42,7 +42,7 @@ export function DocumentCreateForm({
     reset,
     control,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     resolver: zodResolver(createDocumentSchema),
     defaultValues: {
@@ -158,7 +158,7 @@ export function DocumentCreateForm({
                       if (!value) return;
                       field.onChange(value);
                       const selectedType = documentTypes.find((type) => type.id === value);
-                      if (selectedType) {
+                      if (selectedType && !dirtyFields.closingText) {
                         setValue("closingText", getDefaultClosingText(selectedType.code));
                       }
                     }}
