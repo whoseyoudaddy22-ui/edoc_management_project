@@ -1,6 +1,15 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
-import { Role } from "../src/generated/prisma/enums";
+import { Role, DocumentLayout } from "../src/generated/prisma/enums";
+
+// รหัสประเภทเอกสารตาม .claude/skills/document-numbering/SKILL.md — ห้ามเปลี่ยนโดยไม่อัปเดต skill นั้นก่อน
+const DOCUMENT_TYPE_SEEDS = [
+  { code: "0001", name: "หนังสือภายนอก", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0002", name: "หนังสือภายใน", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0003", name: "คำสั่ง", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0004", name: "ประกาศ", layout: DocumentLayout.OFFICIAL_LETTER },
+  { code: "0005", name: "บันทึกข้อความ", layout: DocumentLayout.MEMO },
+];
 
 // Seed สำหรับฐานข้อมูล production (docs_management_prod) เท่านั้น — ห้ามรันตรงด้วย `tsx`
 // ต้องรันผ่าน `npm run prod:db:seed` ซึ่งใช้ dotenv-cli โหลด .env.production เพื่อชี้ DATABASE_URL
@@ -53,6 +62,18 @@ async function main() {
   });
 
   console.log(`Seeded user: ${audit.email} (password: Audit1234) — เปลี่ยนรหัสผ่านนี้ทันทีหลัง seed`);
+
+  await Promise.all(
+    DOCUMENT_TYPE_SEEDS.map((type) =>
+      prisma.documentType.upsert({
+        where: { code: type.code },
+        update: {},
+        create: { ...type, isActive: true },
+      })
+    )
+  );
+
+  console.log(`Seeded ${DOCUMENT_TYPE_SEEDS.length} document types`);
 }
 
 main()
