@@ -18,6 +18,15 @@ RUN npm run build
 # ตัด devDependencies ออกก่อนนำ node_modules ไปใช้ใน production image
 RUN npm prune --omit=dev
 
+# ---- Stage 2b: tools (สำหรับรัน one-off script เช่น prisma seed ที่ต้อง import จาก src/ ตรงๆ) ----
+# แยกจาก "runner" เพราะ runner ตัด devDependencies + source ที่ไม่ใช่ src/generated ออกหมดแล้ว
+# (ดู docker-compose.yml service "seed" — ใช้ target นี้)
+FROM node:20-alpine AS tools
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npx prisma generate
+
 # ---- Stage 3: production runtime ----
 FROM node:20-alpine AS runner
 WORKDIR /app
