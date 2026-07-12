@@ -43,17 +43,19 @@ const ADMIN_NAV_GROUP = {
   ],
 };
 
-export function Sidebar({
+export function SidebarContent({
   user,
+  onNavigate,
 }: {
   user: { name: string; role: Role };
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const navGroups =
     user.role === Role.ADMIN ? [...NAV_GROUPS, ADMIN_NAV_GROUP] : NAV_GROUPS;
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-3 px-5 py-6">
         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-accent-gold/70">
           <Image
@@ -84,6 +86,7 @@ export function Sidebar({
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={onNavigate}
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                       isActive
@@ -118,6 +121,18 @@ export function Sidebar({
           <LogOut className="h-4 w-4" />
         </button>
       </div>
+    </div>
+  );
+}
+
+export function Sidebar({
+  user,
+}: {
+  user: { name: string; role: Role };
+}) {
+  return (
+    <aside className="hidden h-screen w-64 shrink-0 lg:flex">
+      <SidebarContent user={user} />
     </aside>
   );
 }
