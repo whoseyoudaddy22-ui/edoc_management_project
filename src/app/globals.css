@@ -204,4 +204,11 @@
     background: transparent !important;
     padding: 0 !important;
   }
+
+  /* dashboard-shell.tsx ครอบทุกหน้าไว้ด้วย <main class="p-4 sm:p-6">
+     รวมถึงหน้าพิมพ์/Export PDF ด้วย — padding นี้ไม่ถูกรีเซ็ต ทำให้เนื้อหาที่พอดี
+     1 หน้ากระดาษ A4 พอดีเป๊ะ ล้นไปสร้างหน้าเปล่าที่ 2 เพราะความสูงเกินมาไม่กี่ px */
+  main {
+    padding: 0 !important;
+  }
 }
