@@ -319,7 +319,6 @@ export function DocumentCreateForm({
               <AutocompleteInput
                 field="departmentName"
                 id="departmentName"
-                placeholder="เช่น กองพัสดุฯ องค์การบริหารส่วนจังหวัดพิษณุโลก โทร.0-5598-7718-20 ต่อ 800"
                 {...register("departmentName")}
               />
               {errors.departmentName && (
