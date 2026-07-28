@@ -32,6 +32,11 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Chromium สำหรับ src/lib/pdf-generator.ts (puppeteer-core ไม่มี browser มาให้เอง —
+# ตั้งใจไม่ใช้ puppeteer เต็มรูปแบบเพราะ Chromium ที่มันดาวน์โหลดมาใช้กับ Alpine (musl) ไม่ได้)
+RUN apk add --no-cache chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 
 COPY --from=builder /app/node_modules ./node_modules

@@ -21,7 +21,11 @@ export function DashboardShell({
       <Sidebar user={user} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-sidebar-border bg-sidebar px-4 py-3 text-sidebar-foreground lg:hidden">
+        {/* no-print: ปกติซ่อนอยู่แล้วบน desktop viewport (lg:hidden) แต่ page.pdf() ของ
+            puppeteer-core เลย์เอาต์หน้าตาม @page A4 (~794px) ไม่ใช่ viewport ที่ตั้งด้วย
+            setViewport ทำให้ lg:hidden เข้าใจผิดว่าอยู่ในโหมดมือถือและโผล่มาในไฟล์ PDF
+            (ดู src/lib/pdf-generator.ts) จึงต้องบังคับซ่อนด้วย .no-print ควบคู่ไปด้วยเสมอ */}
+        <header className="no-print flex items-center gap-3 border-b border-sidebar-border bg-sidebar px-4 py-3 text-sidebar-foreground lg:hidden">
           <button
             type="button"
             onClick={() => setOpen(true)}
