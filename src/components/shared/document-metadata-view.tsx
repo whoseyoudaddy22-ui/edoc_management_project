@@ -7,8 +7,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { DocumentHistoryTimeline } from "@/components/shared/document-history-timeline";
 import { formatFileSize } from "@/lib/upload";
 import { formatThaiDate, formatThaiDateTime } from "@/lib/format";
-import { PRIORITY_LABELS } from "@/lib/labels";
-import { DocumentStatus, Priority } from "@/generated/prisma/enums";
+import { PRIORITY_LABELS, TITLE_PREFIX_LABELS } from "@/lib/labels";
+import { DocumentStatus, Priority, TitlePrefix } from "@/generated/prisma/enums";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -31,6 +31,7 @@ export type DocumentMetadata = {
   referenceNumber: string | null;
   content: string;
   documentDate: Date | string;
+  signerTitlePrefix: TitlePrefix | null;
   signerName: string | null;
   signerPosition: string | null;
   approvedAt: Date | string | null;
@@ -113,7 +114,14 @@ export function DocumentMetadataView({ document: doc }: { document: DocumentMeta
                   />
                   <Field label="เรียน" value={doc.recipient} />
                   <Field label="จาก" value={doc.sender} />
-                  <Field label="ผู้ลงนาม" value={doc.signerName} />
+                  <Field
+                    label="ผู้ลงนาม"
+                    value={
+                      doc.signerName
+                        ? `${doc.signerTitlePrefix ? TITLE_PREFIX_LABELS[doc.signerTitlePrefix] : ""}${doc.signerName}`
+                        : null
+                    }
+                  />
                   <Field label="ตำแหน่งผู้ลงนาม" value={doc.signerPosition} />
                   <Field label="สร้างเมื่อ" value={formatThaiDateTime(doc.createdAt)} />
                   <Field label="แก้ไขล่าสุด" value={formatThaiDateTime(doc.updatedAt)} />

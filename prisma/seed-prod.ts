@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { getDefaultComponentKey } from "../src/lib/document-templates/component-key";
+import { getDefaultClosingText } from "../src/lib/labels";
 import { Role, DocumentLayout } from "../src/generated/prisma/enums";
 
 // รหัสประเภทเอกสารตาม .claude/skills/document-numbering/SKILL.md — ห้ามเปลี่ยนโดยไม่อัปเดต skill นั้นก่อน
@@ -63,7 +65,7 @@ async function main() {
 
   console.log(`Seeded user: ${audit.email} (password: Audit1234) — เปลี่ยนรหัสผ่านนี้ทันทีหลัง seed`);
 
-  await Promise.all(
+  const documentTypes = await Promise.all(
     DOCUMENT_TYPE_SEEDS.map((type) =>
       prisma.documentType.upsert({
         where: { code: type.code },
@@ -74,6 +76,24 @@ async function main() {
   );
 
   console.log(`Seeded ${DOCUMENT_TYPE_SEEDS.length} document types`);
+
+  await Promise.all(
+    documentTypes.map((type) =>
+      prisma.templateDefinition.upsert({
+        where: { documentTypeCode: type.code },
+        update: {},
+        create: {
+          documentTypeCode: type.code,
+          name: `เทมเพลตมาตรฐาน: ${type.name}`,
+          componentKey: getDefaultComponentKey(type.layout),
+          layoutConfig: { dateFormat: type.layout === DocumentLayout.MEMO ? "month-year" : "full" },
+          defaultClosingText: getDefaultClosingText(type.layout),
+        },
+      })
+    )
+  );
+
+  console.log(`Seeded ${documentTypes.length} template definitions`);
 }
 
 main()

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Document } from "@/generated/prisma/client";
-import { createDocumentWithAutoNumber } from "@/lib/document-number";
+import { createDocumentWithAutoNumber, DuplicateDocumentNumberError } from "@/lib/document-number";
 import { createDocumentSchema } from "@/lib/validations/document";
 import { requireRole } from "@/lib/authorize";
 import { getDefaultClosingText } from "@/lib/labels";
@@ -43,7 +43,10 @@ export async function POST(request: NextRequest) {
   // มิเช่นนั้นผู้ใช้ A จะส่ง id ของผู้ใช้ B มาแอบอ้างเป็นผู้สร้างเอกสารแทนได้ (IDOR)
   const [creator, documentType] = await Promise.all([
     prisma.user.findUnique({ where: { id: session.user.id } }),
-    prisma.documentType.findUnique({ where: { id: input.documentTypeId } }),
+    prisma.documentType.findUnique({
+      where: { id: input.documentTypeId },
+      include: { templateDefinition: { select: { id: true, isActive: true } } },
+    }),
   ]);
 
   if (!creator) {
@@ -64,6 +67,15 @@ export async function POST(request: NextRequest) {
   if (!documentType || !documentType.isActive) {
     return NextResponse.json(
       { error: "ไม่พบประเภทเอกสารที่ระบุ หรือประเภทเอกสารถูกปิดใช้งาน" },
+      { status: 404 }
+    );
+  }
+
+  // ประเภทเอกสารต้องมีเทมเพลตที่เปิดใช้งานอยู่ก่อนจึงจะสร้างเอกสารใหม่ได้ (ดู
+  // docs/modules/module-17-smart-template-system.md > Testing Checklist)
+  if (!documentType.templateDefinition || !documentType.templateDefinition.isActive) {
+    return NextResponse.json(
+      { error: "ประเภทเอกสารนี้ยังไม่มีเทมเพลตที่เปิดใช้งาน ไม่สามารถสร้างเอกสารได้" },
       { status: 404 }
     );
   }
@@ -89,11 +101,16 @@ export async function POST(request: NextRequest) {
         // ถ้า client ไม่ส่ง closingText มา ใช้ default ตามประเภทเอกสาร (memo -> จึงเรียนมาเพื่อทราบฯ)
         // ตัดสินที่ server เสมอ ไม่พึ่ง default ฝั่งฟอร์ม เผื่อกรณีเรียก API ตรง
         closingText: input.closingText ?? getDefaultClosingText(documentType.layout),
+        signerTitlePrefix: input.signerTitlePrefix,
         signerName: input.signerName,
         signerPosition: input.signerPosition,
         documentType: { connect: { id: documentType.id } },
+        ...(documentType.templateDefinition
+          ? { templateDefinition: { connect: { id: documentType.templateDefinition.id } } }
+          : {}),
         createdBy: { connect: { id: creator.id } },
-      })
+      }),
+      input.documentNumber
     );
 
     await logAction({
@@ -105,6 +122,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: document }, { status: 201 });
   } catch (error) {
+    if (error instanceof DuplicateDocumentNumberError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error("Failed to create document", error);
     return NextResponse.json(
       { error: "ไม่สามารถสร้างเอกสารได้ กรุณาลองใหม่อีกครั้ง" },

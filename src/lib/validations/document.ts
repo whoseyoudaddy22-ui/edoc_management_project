@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ClosingText, DocumentStatus, Priority } from "@/generated/prisma/enums";
+import { ClosingText, DocumentStatus, Priority, TitlePrefix } from "@/generated/prisma/enums";
 
 // ช่องข้อความที่ไม่บังคับกรอก แต่ฟอร์ม (react-hook-form) จะส่งค่าเป็น "" แทน undefined
 // เมื่อผู้ใช้ไม่ได้พิมพ์อะไร — ถ้าไม่แปลง "" เป็น undefined ก่อน จะถูกบันทึกเป็น "" ใน DB
@@ -18,10 +18,20 @@ export const FIELD_MAX = {
   content: 50_000,
   signerName: 255,
   signerPosition: 255,
+  documentNumber: 100,
 } as const;
 
 export const createDocumentSchema = z.object({
   documentTypeId: z.string().min(1, "กรุณาระบุประเภทเอกสาร"),
+  // ปกติไม่ส่งมา (server ออกเลขให้อัตโนมัติ) แต่ผู้ใช้พิมพ์เองแทนได้ ดู
+  // .claude/skills/document-numbering/SKILL.md > การพิมพ์เลขที่ด้วยมือ
+  documentNumber: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .max(FIELD_MAX.documentNumber, `เลขที่หนังสือต้องไม่เกิน ${FIELD_MAX.documentNumber} ตัวอักษร`)
+      .optional()
+  ),
   documentDate: z.coerce.date(),
   title: z
     .string()
@@ -54,6 +64,7 @@ export const createDocumentSchema = z.object({
   // ไม่ตั้ง default ที่นี่ — ถ้า client ไม่ส่งมา ฝั่ง API จะเลือก default ตามประเภทเอกสาร
   // (getDefaultClosingText ใน src/lib/labels.ts) เพื่อให้ default ถูกต้องแม้ client เรียก API ตรง
   closingText: z.enum(ClosingText).optional(),
+  signerTitlePrefix: z.enum(TitlePrefix).optional(),
   signerName: z
     .string()
     .max(FIELD_MAX.signerName, `ชื่อผู้ลงนามต้องไม่เกิน ${FIELD_MAX.signerName} ตัวอักษร`)
@@ -80,6 +91,7 @@ export const updateDocumentSchema = z
     content: z.string().min(1).max(FIELD_MAX.content).optional(),
     closingText: z.enum(ClosingText).nullable().optional(),
     status: z.enum(DocumentStatus).optional(),
+    signerTitlePrefix: z.enum(TitlePrefix).nullable().optional(),
     signerName: z.string().max(FIELD_MAX.signerName).nullable().optional(),
     signerPosition: z.string().max(FIELD_MAX.signerPosition).nullable().optional(),
     approvedById: z.string().nullable().optional(),

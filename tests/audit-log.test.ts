@@ -85,6 +85,18 @@ beforeAll(async () => {
     data: { code: DOCUMENT_TYPE_CODE, name: "ประเภททดสอบ audit log", isActive: true },
   });
   documentTypeId = documentType.id;
+
+  // ต้องมีเทมเพลตที่เปิดใช้งานอยู่ก่อนจึงจะสร้างเอกสารได้ (ดู
+  // docs/modules/module-17-smart-template-system.md > POST /api/documents)
+  await prisma.templateDefinition.create({
+    data: {
+      documentTypeCode: DOCUMENT_TYPE_CODE,
+      name: "เทมเพลตทดสอบ audit log",
+      componentKey: "external-letter-standard",
+      layoutConfig: { dateFormat: "full" },
+      isActive: true,
+    },
+  });
 }, 30_000);
 
 afterAll(async () => {
@@ -94,6 +106,7 @@ afterAll(async () => {
     await prisma.attachment.deleteMany({ where: { documentId } });
   }
   await prisma.document.deleteMany({ where: { departmentCode: TEST_DEPARTMENT_CODE } });
+  await prisma.templateDefinition.deleteMany({ where: { documentTypeCode: DOCUMENT_TYPE_CODE } });
   await prisma.documentType.deleteMany({ where: { code: DOCUMENT_TYPE_CODE } });
   await prisma.user.deleteMany({ where: { departmentCode: TEST_DEPARTMENT_CODE } });
   if (managedUserId) {

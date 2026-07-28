@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DocumentTemplate, type DocumentTemplateData } from "@/components/shared/document-template";
+import { DocumentTemplate, type DocumentTemplateWrapperData } from "@/components/shared/document-template";
 
 type DocumentOption = { id: string; documentNumber: string; title: string };
 
@@ -20,7 +20,7 @@ export function PrintView({
   documentId,
   documentOptions,
 }: {
-  document: DocumentTemplateData;
+  document: DocumentTemplateWrapperData;
   documentId: string;
   documentOptions: DocumentOption[];
 }) {

@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 import { createDocumentWithAutoNumber } from "../src/lib/document-number";
+import { getDefaultComponentKey } from "../src/lib/document-templates/component-key";
+import { getDefaultClosingText } from "../src/lib/labels";
 import { Role, DocumentStatus, Priority, DocumentLayout, TitlePrefix } from "../src/generated/prisma/enums";
 import { deleteAuditLogsForTest } from "../tests/db-test-helpers";
 
@@ -78,6 +80,7 @@ async function resetDatabase() {
   await prisma.attachment.deleteMany();
   await prisma.document.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.templateDefinition.deleteMany();
   await prisma.documentType.deleteMany();
 }
 
@@ -108,6 +111,20 @@ async function main() {
 
   const documentTypes = await Promise.all(
     DOCUMENT_TYPE_SEEDS.map((type) => prisma.documentType.create({ data: { ...type, isActive: true } }))
+  );
+
+  await Promise.all(
+    documentTypes.map((type) =>
+      prisma.templateDefinition.create({
+        data: {
+          documentTypeCode: type.code,
+          name: `เทมเพลตมาตรฐาน: ${type.name}`,
+          componentKey: getDefaultComponentKey(type.layout),
+          layoutConfig: { dateFormat: type.layout === DocumentLayout.MEMO ? "month-year" : "full" },
+          defaultClosingText: getDefaultClosingText(type.layout),
+        },
+      })
+    )
   );
 
   const statuses = Object.values(DocumentStatus);
