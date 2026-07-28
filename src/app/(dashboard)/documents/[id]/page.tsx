@@ -1,6 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { Role } from "@/generated/prisma/enums";
 import { DocumentMetadataView } from "@/components/shared/document-metadata-view";
+
+const APPROVER_ROLES: Role[] = [Role.ADMIN, Role.APPROVER];
 
 export default async function DocumentMetadataPage({
   params,
@@ -8,6 +12,11 @@ export default async function DocumentMetadataPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
 
   const document = await prisma.document.findFirst({
     where: { id, deletedAt: null },
@@ -26,5 +35,11 @@ export default async function DocumentMetadataPage({
     notFound();
   }
 
-  return <DocumentMetadataView document={document} />;
+  return (
+    <DocumentMetadataView
+      document={document}
+      canApprove={APPROVER_ROLES.includes(session.user.role)}
+      currentUserId={session.user.id}
+    />
+  );
 }
