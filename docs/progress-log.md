@@ -139,3 +139,26 @@ Commit `bcb270f` — พบว่า runbook ทั้งไฟล์ยัง�
 - [ ] **บั๊ก CSP บล็อก `eval()` บน dev server** (`next.config.ts` script-src ไม่มี `unsafe-eval`) — ทำให้ `npm run dev:ui-test` (port 3001) ใช้งาน interactive ไม่ได้เลยทั้งหน้า ต้อง verify ผ่าน production build แทนไปก่อน ผู้ใช้ยังไม่ได้ตัดสินใจว่าจะแก้แบบไหน (dev-only relax CSP / อย่างอื่น)
 - [ ] ตั้ง DHCP reservation ที่ router (ค้างมาตั้งแต่ 2026-07-06 — ต้องทำผ่านหน้า admin router โดยตรง อยู่นอกขอบเขตที่ทำจากเครื่องนี้ได้)
 - [ ] จำลองเครื่อง production เสียหายทั้งเครื่องแบบเต็มรูปแบบตาม runbook (ค้างมาตั้งแต่ 2026-07-11 — ต้องมี VM แยกถึงจะทดสอบได้ปลอดภัย)
+
+## 2026-07-28
+
+**Module 17: Smart Template System** — เปลี่ยนวิธี render preview/พิมพ์เอกสารจาก conditional เดียวใน component เดียว (`DocumentLayout` enum) ไปเป็น registry pattern ตาม spec ใหม่ที่คุยกันไว้
+
+- เพิ่ม Prisma model `TemplateDefinition` ผูก `documentTypeCode` กับ `componentKey` (migration `20260728013651_add_template_definition`) seed ให้ครบทั้ง 5 ประเภทเอกสารเดิม (dev/test/prod seed scripts)
+- แยก `document-template.tsx` เดิมออกเป็น `src/components/document-templates/` (`external-letter-standard.tsx`, `memo-standard-v1.tsx`, `shared/page-frame.tsx`, `shared/signature-block.tsx`, `registry.ts`) — `document-template.tsx` เดิมกลายเป็น wrapper บางๆ ที่เลือก component จาก registry ตาม `componentKey` (fallback ตาม layout เดิมถ้าเอกสารเก่ายังไม่มี `TemplateDefinition`)
+- เพิ่มหน้า Admin "จัดการเทมเพลต" (`/template-definitions`) + API เปิด/ปิดใช้งานเทมเพลตต่อประเภทเอกสาร — ปิดแล้วสร้างเอกสารประเภทนั้นใหม่ไม่ได้ แต่เอกสารเก่ายังดู/พิมพ์ได้ปกติ (ทดสอบยืนยันแล้วทั้งสองกรณีในเบราว์เซอร์จริง)
+
+**ฟีเจอร์ฟอร์มสร้างเอกสารเพิ่มเติม** (ผู้ใช้ส่งไฟล์ `.docx` ต้นฉบับจริงของหน่วยงานมาให้เทียบ พบว่าเทมเพลต "หนังสือภายนอก" เดิมไม่มีต้นฉบับอ้างอิงมาก่อนเลย ต่างจาก "บันทึกข้อความ" ที่มี — เป็นเหตุผลที่หน้าพิมพ์เดิมดูไม่ตรง)
+
+- **"ที่" (เลขที่หนังสือ) พิมพ์มือ override ได้ทุกครั้ง** ไม่ล็อกเฉพาะครั้งแรก รูปแบบอิสระไม่ต้องตรง pattern มาตรฐาน (เช่น `พล 0104/25`) — `buddhistYear`/`runningNumber` ยังคำนวณอัตโนมัติต่อเนื่องเบื้องหลังเสมอ พิมพ์เลขซ้ำ reject ทันที (409, ไม่ retry ค้าง) ผ่าน `DuplicateDocumentNumberError` ใหม่
+- เพิ่ม `GET /api/documents/next-number` (เลขแนะนำ preview เฉยๆ ไม่จอง) และ `GET /api/lookups` (ค่าที่เคยกรอกทั้งระบบ แบบ distinct) สำหรับ autocomplete ช่อง ส่วนราชการ/เรื่อง/เรียน และ dropdown ตำแหน่งผู้ลงนาม (ดึงจาก `User.position` จริง)
+- เพิ่ม `Document.signerTitlePrefix` (นาย/นาง/นางสาว) แยกจาก `signerName` แสดงรวมกันในเอกสารพิมพ์ เช่น `(นายสมชาย ใจดี)`
+- **เจอบั๊กระหว่างทดสอบจริง (ไม่ใช่บั๊กโค้ด):** dev server เก่าที่รันค้างข้ามหลาย session มี Prisma Client cache ในหน่วยความจำที่ยังไม่รู้จัก `signerTitlePrefix` (แม้ `prisma generate` ใหม่แล้วก็ตาม เพราะ process ที่รันอยู่ไม่ reload) ทำให้สร้างเอกสารพร้อมข้อมูลผู้ลงนาม error 500 — แก้ด้วยการ restart dev server เท่านั้น
+- **Pre-merge checklist ผ่านครบ:** `npm run test` 103/103, typecheck สะอาด, security review เฉพาะ diff ไม่พบช่องโหว่ Critical/High (access control ของทุก endpoint ใหม่ตรงตาม role ที่ควร, ไม่มี raw SQL, ไม่มี XSS vector — จุดเดียวที่ตั้งข้อสังเกตไว้คือ `/api/lookups` คืนข้อมูลข้ามหน่วยงานได้ แต่ตรวจแล้วว่า**เข้มงวดกว่า** endpoint ค้นหาเอกสารเดิม `/api/documents/search` ที่เปิดกว้างกว่าอยู่แล้ว ไม่ใช่ช่องโหว่ใหม่)
+- เปิด PR #3 → merge เข้า `master` (fast-forward, merge commit ผ่าน `gh pr merge --delete-branch`) — ทำงานทั้งหมดบนเครื่อง dev เท่านั้น **ยังไม่ได้ deploy ขึ้น production** (มี migration ใหม่ 2 ตัวที่ต้อง apply ตอน deploy รอบถัดไป: `add_template_definition`, `add_signer_title_prefix`)
+
+### ยังไม่ได้ทำ (ต่อวันถัดไป)
+- [ ] **Deploy commit ล่าสุดของ `master` ขึ้น production** ตาม playbook `ubuntu-server-ops` (มี migration ใหม่ 2 ตัวต้อง apply ผ่าน service `migrate` ก่อน `up -d --build app`)
+- [ ] บั๊ก CSP บล็อก `eval()` บน dev server (ค้างมาตั้งแต่ 2026-07-13)
+- [ ] ตั้ง DHCP reservation ที่ router (ค้างมาตั้งแต่ 2026-07-06)
+- [ ] จำลองเครื่อง production เสียหายทั้งเครื่องแบบเต็มรูปแบบตาม runbook (ค้างมาตั้งแต่ 2026-07-11)
