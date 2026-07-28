@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { createDocumentWithAutoNumber, getCurrentBuddhistYear } from "@/lib/document-number";
+import {
+  createDocumentWithAutoNumber,
+  getCurrentBuddhistYear,
+  DuplicateDocumentNumberError,
+} from "@/lib/document-number";
 import { Role, DocumentStatus, Priority } from "@/generated/prisma/enums";
 
 // ทดสอบ 2 จุดวิกฤตของการออกเลขที่เอกสาร ตาม module-14-testing.md > ระดับวิกฤต:
@@ -11,6 +15,7 @@ import { Role, DocumentStatus, Priority } from "@/generated/prisma/enums";
 const TEST_DEPARTMENT_CODE = "ทสน"; // สงวนไว้เฉพาะไฟล์เทสนี้ ไม่ปนกับ seed-test.ts หรือไฟล์เทสอื่น
 const CONCURRENCY_TYPE_CODE = "9101";
 const YEAR_RESET_TYPE_CODE = "9102";
+const MANUAL_OVERRIDE_TYPE_CODE = "9103";
 
 type CreatedDocument = {
   id: string;
@@ -22,6 +27,7 @@ type CreatedDocument = {
 let userId: string;
 let concurrencyTypeId: string;
 let yearResetTypeId: string;
+let manualOverrideTypeId: string;
 
 function makeBuildData(documentTypeDbId: string, documentTypeCode: string) {
   return ({
@@ -72,12 +78,17 @@ beforeAll(async () => {
     data: { code: YEAR_RESET_TYPE_CODE, name: "ประเภททดสอบรีเซ็ตปี", isActive: true },
   });
   yearResetTypeId = yearResetType.id;
+
+  const manualOverrideType = await prisma.documentType.create({
+    data: { code: MANUAL_OVERRIDE_TYPE_CODE, name: "ประเภททดสอบพิมพ์เลขมือ", isActive: true },
+  });
+  manualOverrideTypeId = manualOverrideType.id;
 });
 
 afterAll(async () => {
   await prisma.document.deleteMany({ where: { departmentCode: TEST_DEPARTMENT_CODE } });
   await prisma.documentType.deleteMany({
-    where: { code: { in: [CONCURRENCY_TYPE_CODE, YEAR_RESET_TYPE_CODE] } },
+    where: { code: { in: [CONCURRENCY_TYPE_CODE, YEAR_RESET_TYPE_CODE, MANUAL_OVERRIDE_TYPE_CODE] } },
   });
   await prisma.user.delete({ where: { id: userId } });
 });
@@ -138,5 +149,52 @@ describe("Document Numbering", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("Manual documentNumber override", () => {
+  it("บันทึกเลขที่ที่พิมพ์เองได้ (รูปแบบอิสระ) พร้อม buddhistYear/runningNumber ที่คำนวณตามปกติ", async () => {
+    const manualNumber = "พล 0104/25";
+    const doc = await createDocumentWithAutoNumber<CreatedDocument>(
+      TEST_DEPARTMENT_CODE,
+      MANUAL_OVERRIDE_TYPE_CODE,
+      makeBuildData(manualOverrideTypeId, MANUAL_OVERRIDE_TYPE_CODE),
+      manualNumber
+    );
+
+    expect(doc.documentNumber).toBe(manualNumber);
+    expect(doc.runningNumber).toBe(1);
+
+    // เอกสารถัดไปที่ไม่พิมพ์เลขเอง ต้องได้เลขรูปแบบมาตรฐานต่อเนื่องจาก runningNumber เดิม (ไม่สนใจ
+    // รูปแบบของเลขที่พิมพ์มือก่อนหน้า)
+    const nextDoc = await createDocumentWithAutoNumber<CreatedDocument>(
+      TEST_DEPARTMENT_CODE,
+      MANUAL_OVERRIDE_TYPE_CODE,
+      makeBuildData(manualOverrideTypeId, MANUAL_OVERRIDE_TYPE_CODE)
+    );
+
+    expect(nextDoc.runningNumber).toBe(2);
+    expect(nextDoc.documentNumber).toBe(
+      `${TEST_DEPARTMENT_CODE}.${MANUAL_OVERRIDE_TYPE_CODE}/${nextDoc.buddhistYear}-002`
+    );
+  });
+
+  it("reject ทันทีเมื่อพิมพ์เลขที่ซ้ำกับเอกสารที่มีอยู่แล้ว ไม่ retry ค้าง", async () => {
+    const duplicateNumber = "พล 0104/ซ้ำ";
+    await createDocumentWithAutoNumber<CreatedDocument>(
+      TEST_DEPARTMENT_CODE,
+      MANUAL_OVERRIDE_TYPE_CODE,
+      makeBuildData(manualOverrideTypeId, MANUAL_OVERRIDE_TYPE_CODE),
+      duplicateNumber
+    );
+
+    await expect(
+      createDocumentWithAutoNumber<CreatedDocument>(
+        TEST_DEPARTMENT_CODE,
+        MANUAL_OVERRIDE_TYPE_CODE,
+        makeBuildData(manualOverrideTypeId, MANUAL_OVERRIDE_TYPE_CODE),
+        duplicateNumber
+      )
+    ).rejects.toBeInstanceOf(DuplicateDocumentNumberError);
   });
 });

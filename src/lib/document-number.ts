@@ -35,6 +35,44 @@ function isRetryableTransactionError(error: unknown): boolean {
   return /write conflict|deadlock|serializ/i.test(message);
 }
 
+// เกิดเมื่อผู้ใช้พิมพ์เลขที่หนังสือเอง (manualDocumentNumber) ซ้ำกับเอกสารที่มีอยู่แล้ว —
+// ไม่มีประโยชน์ที่จะ retry (เลขที่พิมพ์มาคงที่ ชนซ้ำเหมือนเดิมทุกครั้ง) ต้องแจ้งผู้ใช้ทันที
+export class DuplicateDocumentNumberError extends Error {
+  constructor(public documentNumber: string) {
+    super(`เลขที่หนังสือ "${documentNumber}" ถูกใช้ไปแล้ว`);
+    this.name = "DuplicateDocumentNumberError";
+  }
+}
+
+// รูปแบบ error.meta ต่างกันไปตาม driver — บาง engine ให้ meta.target ตรงๆ แต่ driver adapter
+// (@prisma/adapter-pg ที่โปรเจกต์นี้ใช้) ห่อรายละเอียดจริงไว้ใน
+// meta.driverAdapterError.cause.constraint.fields แทน (ดู error จริงที่ debug ไว้) จึงต้องเช็คทั้งคู่
+// พร้อม fallback เป็นข้อความ error เผื่อรูปแบบเปลี่ยนอีกในอนาคต
+function isDocumentNumberUniqueViolation(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    return false;
+  }
+
+  const target = error.meta?.target;
+  if (Array.isArray(target) && target.some((t) => String(t).includes("documentNumber"))) {
+    return true;
+  }
+  if (typeof target === "string" && target.includes("documentNumber")) {
+    return true;
+  }
+
+  const driverFields = (
+    error.meta?.driverAdapterError as
+      | { cause?: { constraint?: { fields?: unknown } } }
+      | undefined
+  )?.cause?.constraint?.fields;
+  if (Array.isArray(driverFields) && driverFields.some((f) => String(f).includes("documentNumber"))) {
+    return true;
+  }
+
+  return error.message.includes("documentNumber");
+}
+
 function backoffDelayMs(attempt: number): number {
   const base = 20 * 2 ** (attempt - 1);
   const jitter = Math.random() * base;
@@ -58,7 +96,11 @@ export async function createDocumentWithAutoNumber<T>(
     documentNumber: string;
     buddhistYear: number;
     runningNumber: number;
-  }) => Prisma.DocumentCreateInput
+  }) => Prisma.DocumentCreateInput,
+  // ผู้ใช้พิมพ์เลขที่หนังสือเองแทนเลขมาตรฐานได้ (เช่น นำเข้าเลขจริงจากหน่วยงานต้นทาง) — แต่
+  // buddhistYear/runningNumber ยังคำนวณต่อเนื่องตามปกติเสมอ เพื่อให้เลขแนะนำครั้งถัดไปยังถูกต้อง
+  // ดู .claude/skills/document-numbering/SKILL.md > การพิมพ์เลขที่ด้วยมือ
+  manualDocumentNumber?: string
 ): Promise<T> {
   const buddhistYear = getCurrentBuddhistYear();
 
@@ -73,12 +115,14 @@ export async function createDocumentWithAutoNumber<T>(
           });
 
           const runningNumber = (last?.runningNumber ?? 0) + 1;
-          const documentNumber = formatDocumentNumber({
-            departmentCode,
-            documentTypeCode,
-            buddhistYear,
-            runningNumber,
-          });
+          const documentNumber =
+            manualDocumentNumber ??
+            formatDocumentNumber({
+              departmentCode,
+              documentTypeCode,
+              buddhistYear,
+              runningNumber,
+            });
 
           const data = buildData({ documentNumber, buddhistYear, runningNumber });
 
@@ -88,6 +132,9 @@ export async function createDocumentWithAutoNumber<T>(
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
       );
     } catch (error) {
+      if (manualDocumentNumber && isDocumentNumberUniqueViolation(error)) {
+        throw new DuplicateDocumentNumberError(manualDocumentNumber);
+      }
       if (!isRetryableTransactionError(error) || attempt === MAX_RETRIES) {
         throw error;
       }

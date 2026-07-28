@@ -2,6 +2,8 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 import { createDocumentWithAutoNumber } from "../src/lib/document-number";
+import { getDefaultComponentKey } from "../src/lib/document-templates/component-key";
+import { getDefaultClosingText } from "../src/lib/labels";
 import { DocumentStatus, Priority, DocumentLayout } from "../src/generated/prisma/enums";
 
 // สร้างข้อมูลทดสอบเอกสารจำนวนมาก สำหรับทดสอบ multi-criteria search / pagination
@@ -54,6 +56,22 @@ async function main() {
         where: { code: type.code },
         update: {},
         create: { ...type, isActive: true },
+      })
+    )
+  );
+
+  await Promise.all(
+    documentTypes.map((type) =>
+      prisma.templateDefinition.upsert({
+        where: { documentTypeCode: type.code },
+        update: {},
+        create: {
+          documentTypeCode: type.code,
+          name: `เทมเพลตมาตรฐาน: ${type.name}`,
+          componentKey: getDefaultComponentKey(type.layout),
+          layoutConfig: { dateFormat: type.layout === DocumentLayout.MEMO ? "month-year" : "full" },
+          defaultClosingText: getDefaultClosingText(type.layout),
+        },
       })
     )
   );

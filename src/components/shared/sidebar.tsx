@@ -13,6 +13,7 @@ import {
   Users,
   History,
   DatabaseBackup,
+  LayoutTemplate,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const ADMIN_NAV_GROUP = {
   label: "ระบบ",
   items: [
     { href: "/users", label: "จัดการผู้ใช้งาน", icon: Users },
+    { href: "/template-definitions", label: "จัดการเทมเพลต", icon: LayoutTemplate },
     { href: "/audit-logs", label: "ประวัติการใช้งานระบบ", icon: History },
     { href: "/backup", label: "สำรองข้อมูล", icon: DatabaseBackup },
   ],

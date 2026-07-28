@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FilePlus, FileStack, FileEdit, CheckCircle2 } from "lucide-react";
+import { FilePlus, FileStack, FileEdit, FileSignature, CalendarDays, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,16 +16,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AutocompleteInput } from "@/components/shared/autocomplete-input";
 import { createDocumentSchema } from "@/lib/validations/document";
-import { CLOSING_TEXT_LABELS, PRIORITY_LABELS, getDefaultClosingText } from "@/lib/labels";
-import { ClosingText, DocumentLayout, Priority } from "@/generated/prisma/enums";
+import {
+  CLOSING_TEXT_LABELS,
+  PRIORITY_LABELS,
+  TITLE_PREFIX_LABELS,
+  getDefaultClosingText,
+} from "@/lib/labels";
+import { ClosingText, DocumentLayout, Priority, TitlePrefix } from "@/generated/prisma/enums";
+
+const DOCUMENT_DATE_INPUT_ID = "documentDate";
 
 function todayAsInputValue() {
   return new Date().toISOString().slice(0, 10);
-}
-
-function getCurrentBuddhistYear() {
-  return new Date().getFullYear() + 543;
 }
 
 export function DocumentCreateForm({
@@ -42,11 +46,13 @@ export function DocumentCreateForm({
     reset,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
     resolver: zodResolver(createDocumentSchema),
     defaultValues: {
       documentTypeId: "",
+      documentNumber: "",
       documentDate: todayAsInputValue(),
       priority: Priority.NORMAL,
       title: "",
@@ -56,8 +62,35 @@ export function DocumentCreateForm({
       referenceNumber: "",
       content: "",
       closingText: ClosingText.RESPECTFULLY,
+      signerTitlePrefix: undefined,
+      signerName: "",
+      signerPosition: "",
     },
   });
+
+  const selectedDocumentTypeId = watch("documentTypeId");
+
+  // เติมเลขที่หนังสือแนะนำ (รูปแบบมาตรฐาน) ให้อัตโนมัติทุกครั้งที่เปลี่ยนประเภทเอกสาร แต่
+  // ผู้ใช้แก้ไขทับได้เสมอ — ถ้าผู้ใช้เคยแก้ไขเองแล้ว (dirty) จะไม่เขียนทับค่าที่พิมพ์ไว้
+  useEffect(() => {
+    const selectedType = documentTypes.find((type) => type.id === selectedDocumentTypeId);
+    if (!selectedType || dirtyFields.documentNumber) return;
+
+    const controller = new AbortController();
+    fetch(`/api/documents/next-number?documentTypeCode=${selectedType.code}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { data?: { documentNumber: string } } | null) => {
+        if (body?.data?.documentNumber) {
+          setValue("documentNumber", body.data.documentNumber);
+        }
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDocumentTypeId]);
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -65,7 +98,13 @@ export function DocumentCreateForm({
       const response = await fetch("/api/documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          // ส่งเลขที่หนังสือไปจริงเฉพาะตอนผู้ใช้แก้ไขค่าที่ระบบเสนอเอง (override) — ถ้าปล่อยตามค่า
+          // ที่ระบบเติมให้ ปล่อยให้ server คำนวณ+ล็อกเลขแบบ atomic ตอนบันทึกแทน กันเลขชนกันจาก
+          // ช่วงเวลาที่ต่างกันระหว่างตอนเสนอเลขกับตอนบันทึกจริง
+          documentNumber: dirtyFields.documentNumber ? values.documentNumber : undefined,
+        }),
       });
       const body = await response.json();
 
@@ -77,6 +116,7 @@ export function DocumentCreateForm({
       setCreatedDocumentNumber(body.data.documentNumber);
       reset({
         documentTypeId: "",
+        documentNumber: "",
         documentDate: todayAsInputValue(),
         priority: Priority.NORMAL,
         title: "",
@@ -86,6 +126,9 @@ export function DocumentCreateForm({
         referenceNumber: "",
         content: "",
         closingText: ClosingText.RESPECTFULLY,
+        signerTitlePrefix: undefined,
+        signerName: "",
+        signerPosition: "",
       });
     } catch {
       setSubmitError("เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง");
@@ -126,19 +169,43 @@ export function DocumentCreateForm({
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label>เลขที่หนังสือ</Label>
+              <Label htmlFor="documentNumber">ที่ (เลขที่หนังสือ)</Label>
               <Input
-                disabled
-                value={`ระบบจะออกให้อัตโนมัติ (พ.ศ. ${getCurrentBuddhistYear()})`}
-                className="text-gray-500"
+                id="documentNumber"
+                placeholder="ระบบจะเสนอเลขให้อัตโนมัติเมื่อเลือกประเภทเอกสาร"
+                {...register("documentNumber")}
               />
+              {errors.documentNumber && (
+                <p className="text-xs text-red-600">{errors.documentNumber.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="documentDate">
+              <Label htmlFor={DOCUMENT_DATE_INPUT_ID}>
                 วันที่หนังสือ <span className="text-red-500">*</span>
               </Label>
-              <Input id="documentDate" type="date" {...register("documentDate")} />
+              <div className="flex gap-2">
+                <Input
+                  id={DOCUMENT_DATE_INPUT_ID}
+                  type="date"
+                  className="flex-1"
+                  {...register("documentDate")}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  title="เลือกวันที่"
+                  onClick={() => {
+                    const input = document.getElementById(
+                      DOCUMENT_DATE_INPUT_ID
+                    ) as HTMLInputElement | null;
+                    input?.showPicker?.();
+                  }}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </Button>
+              </div>
               {errors.documentDate && (
                 <p className="text-xs text-red-600">{errors.documentDate.message}</p>
               )}
@@ -221,7 +288,7 @@ export function DocumentCreateForm({
               <Label htmlFor="title">
                 ชื่อเรื่อง <span className="text-red-500">*</span>
               </Label>
-              <Input id="title" {...register("title")} />
+              <AutocompleteInput field="title" id="title" {...register("title")} />
               {errors.title && (
                 <p className="text-xs text-red-600">{errors.title.message}</p>
               )}
@@ -231,7 +298,7 @@ export function DocumentCreateForm({
               <Label htmlFor="recipient">
                 เรียน <span className="text-red-500">*</span>
               </Label>
-              <Input id="recipient" {...register("recipient")} />
+              <AutocompleteInput field="recipient" id="recipient" {...register("recipient")} />
               {errors.recipient && (
                 <p className="text-xs text-red-600">{errors.recipient.message}</p>
               )}
@@ -249,9 +316,9 @@ export function DocumentCreateForm({
 
             <div className="flex flex-col gap-1.5 md:col-span-2">
               <Label htmlFor="departmentName">ส่วนราชการ</Label>
-              <Input
+              <AutocompleteInput
+                field="departmentName"
                 id="departmentName"
-                placeholder="เช่น กองพัสดุฯ องค์การบริหารส่วนจังหวัดพิษณุโลก โทร.0-5598-7718-20 ต่อ 800"
                 {...register("departmentName")}
               />
               {errors.departmentName && (
@@ -311,6 +378,68 @@ export function DocumentCreateForm({
               />
               {errors.closingText && (
                 <p className="text-xs text-red-600">{errors.closingText.message}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSignature className="h-4 w-4" />
+              ผู้ลงนาม
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="flex gap-2 md:col-span-2">
+              <div className="flex w-40 flex-col gap-1.5">
+                <Label htmlFor="signerTitlePrefix">คำนำหน้า</Label>
+                <Controller
+                  control={control}
+                  name="signerTitlePrefix"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => field.onChange(value || undefined)}
+                    >
+                      <SelectTrigger id="signerTitlePrefix" className="w-full">
+                        <SelectValue placeholder="เลือก">
+                          {(value: TitlePrefix | null) =>
+                            value ? TITLE_PREFIX_LABELS[value] : "เลือก"
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(TitlePrefix).map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {TITLE_PREFIX_LABELS[value]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor="signerName">ชื่อ-นามสกุล</Label>
+                <Input id="signerName" placeholder="พิมพ์ชื่อเต็ม" {...register("signerName")} />
+                {errors.signerName && (
+                  <p className="text-xs text-red-600">{errors.signerName.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <Label htmlFor="signerPosition">ตำแหน่ง</Label>
+              <AutocompleteInput
+                field="position"
+                id="signerPosition"
+                placeholder="เช่น หัวหน้าเจ้าหน้าที่"
+                {...register("signerPosition")}
+              />
+              {errors.signerPosition && (
+                <p className="text-xs text-red-600">{errors.signerPosition.message}</p>
               )}
             </div>
           </CardContent>

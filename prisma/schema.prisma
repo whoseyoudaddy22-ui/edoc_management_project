@@ -119,16 +119,40 @@ model DocumentType {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  documents Document[]
+  documents          Document[]
+  templateDefinition TemplateDefinition?
+}
+
+// ผูก documentTypeCode กับ React component ที่ใช้ render preview/print ผ่าน componentKey
+// (ดู docs/modules/module-17-smart-template-system.md) — componentKey แก้ layout ไม่ได้ผ่านหน้าเว็บ
+// ต้องแก้ผ่านโค้ด + PR เท่านั้น เพื่อรักษาคุณภาพ/ตรวจสอบได้ (ไม่เก็บ HTML/CSS ดิบใน DB)
+model TemplateDefinition {
+  id                 String       @id @default(cuid())
+  documentTypeCode   String       @unique
+  name               String
+  componentKey       String // key ที่ map ไปยัง component จริงใน src/components/document-templates/registry.ts
+  layoutConfig       Json
+  defaultClosingText ClosingText?
+  isActive           Boolean      @default(true)
+  version            Int          @default(1) // เพิ่มทุกครั้งที่แก้ layout เพื่อ track ประวัติการเปลี่ยนแปลง
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  documentType DocumentType @relation(fields: [documentTypeCode], references: [code])
+  documents    Document[]
 }
 
 model Document {
   id                String         @id @default(cuid())
+  // ปกติระบบออกให้อัตโนมัติตามรูปแบบใน .claude/skills/document-numbering/SKILL.md แต่ผู้ใช้
+  // พิมพ์ค่าเองแทนได้ (เช่น กรณีนำเข้าเลขที่จริงจากหน่วยงานต้นทาง) — buddhistYear/runningNumber
+  // ยังคำนวณอัตโนมัติเสมอไม่ว่ากรณีใด เพื่อให้เลขแนะนำครั้งถัดไปต่อเนื่องได้
   documentNumber    String         @unique
   departmentCode    String
   departmentName    String? // ชื่อเต็มส่วนราชการ + เบอร์โทร แสดงที่หัวเอกสาร คนละความหมายกับ departmentCode (ใช้ในเลขที่เอกสารอัตโนมัติ)
   documentTypeId    String
   documentTypeCode  String
+  templateDefinitionId String? // เทมเพลตที่ใช้ตอนสร้างเอกสารนี้จริง (track ประวัติ แม้ TemplateDefinition จะถูกแก้ version ภายหลัง)
   buddhistYear      Int
   runningNumber     Int
   documentDate      DateTime
@@ -140,6 +164,7 @@ model Document {
   content           String
   closingText       ClosingText?   @default(RESPECTFULLY)
   status            DocumentStatus @default(DRAFT)
+  signerTitlePrefix TitlePrefix?
   signerName        String?
   signerPosition    String?
   createdById       String
@@ -149,10 +174,11 @@ model Document {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  documentType DocumentType @relation(fields: [documentTypeId], references: [id])
-  createdBy    User         @relation("DocumentCreatedBy", fields: [createdById], references: [id])
-  approvedBy   User?        @relation("DocumentApprovedBy", fields: [approvedById], references: [id])
-  attachments  Attachment[]
+  documentType       DocumentType         @relation(fields: [documentTypeId], references: [id])
+  templateDefinition TemplateDefinition?  @relation(fields: [templateDefinitionId], references: [id])
+  createdBy          User                 @relation("DocumentCreatedBy", fields: [createdById], references: [id])
+  approvedBy         User?                @relation("DocumentApprovedBy", fields: [approvedById], references: [id])
+  attachments        Attachment[]
 
   @@unique([buddhistYear, documentTypeCode, departmentCode, runningNumber])
   @@index([documentTypeCode])

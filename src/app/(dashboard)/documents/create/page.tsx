@@ -5,7 +5,7 @@ import { DocumentCreateForm } from "@/components/shared/document-create-form";
 export default async function CreateDocumentPage() {
   const [documentTypes, session] = await Promise.all([
     prisma.documentType.findMany({
-      where: { isActive: true },
+      where: { isActive: true, templateDefinition: { isActive: true } },
       orderBy: { name: "asc" },
       select: { id: true, name: true, code: true, layout: true },
     }),

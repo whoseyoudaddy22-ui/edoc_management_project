@@ -12,7 +12,10 @@ export default async function DocumentPrintPage({
   const [document, documentOptions] = await Promise.all([
     prisma.document.findFirst({
       where: { id, deletedAt: null },
-      include: { documentType: { select: { name: true, layout: true } } },
+      include: {
+        documentType: { select: { name: true, layout: true } },
+        templateDefinition: { select: { componentKey: true } },
+      },
     }),
     prisma.document.findMany({
       where: { deletedAt: null },
@@ -26,7 +29,13 @@ export default async function DocumentPrintPage({
     notFound();
   }
 
+  const { templateDefinition, ...documentFields } = document;
+
   return (
-    <PrintView document={document} documentId={id} documentOptions={documentOptions} />
+    <PrintView
+      document={{ ...documentFields, templateComponentKey: templateDefinition?.componentKey ?? null }}
+      documentId={id}
+      documentOptions={documentOptions}
+    />
   );
 }
