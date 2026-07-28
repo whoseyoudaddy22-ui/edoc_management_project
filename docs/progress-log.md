@@ -155,10 +155,17 @@ Commit `bcb270f` — พบว่า runbook ทั้งไฟล์ยัง�
 - เพิ่ม `Document.signerTitlePrefix` (นาย/นาง/นางสาว) แยกจาก `signerName` แสดงรวมกันในเอกสารพิมพ์ เช่น `(นายสมชาย ใจดี)`
 - **เจอบั๊กระหว่างทดสอบจริง (ไม่ใช่บั๊กโค้ด):** dev server เก่าที่รันค้างข้ามหลาย session มี Prisma Client cache ในหน่วยความจำที่ยังไม่รู้จัก `signerTitlePrefix` (แม้ `prisma generate` ใหม่แล้วก็ตาม เพราะ process ที่รันอยู่ไม่ reload) ทำให้สร้างเอกสารพร้อมข้อมูลผู้ลงนาม error 500 — แก้ด้วยการ restart dev server เท่านั้น
 - **Pre-merge checklist ผ่านครบ:** `npm run test` 103/103, typecheck สะอาด, security review เฉพาะ diff ไม่พบช่องโหว่ Critical/High (access control ของทุก endpoint ใหม่ตรงตาม role ที่ควร, ไม่มี raw SQL, ไม่มี XSS vector — จุดเดียวที่ตั้งข้อสังเกตไว้คือ `/api/lookups` คืนข้อมูลข้ามหน่วยงานได้ แต่ตรวจแล้วว่า**เข้มงวดกว่า** endpoint ค้นหาเอกสารเดิม `/api/documents/search` ที่เปิดกว้างกว่าอยู่แล้ว ไม่ใช่ช่องโหว่ใหม่)
-- เปิด PR #3 → merge เข้า `master` (fast-forward, merge commit ผ่าน `gh pr merge --delete-branch`) — ทำงานทั้งหมดบนเครื่อง dev เท่านั้น **ยังไม่ได้ deploy ขึ้น production** (มี migration ใหม่ 2 ตัวที่ต้อง apply ตอน deploy รอบถัดไป: `add_template_definition`, `add_signer_title_prefix`)
+- เปิด PR #3 → merge เข้า `master` (fast-forward, merge commit ผ่าน `gh pr merge --delete-branch`)
+
+**Deploy ขึ้น production สำเร็จ** (บ่าย 2026-07-28, ผู้ใช้รันคำสั่งเองผ่าน SSH ตรงบนเครื่อง `edocsserver` ตาม playbook `ubuntu-server-ops` หัวข้อ 6 — เครื่องนี้ไม่มี SSH access ไปหา production ได้เอง):
+
+- `git pull origin master` (`c5ec345..72a5591`, fast-forward) → `docker compose build migrate seed` → `run --rm migrate` (migration ทั้ง 2 ตัวใหม่ apply สำเร็จ ยืนยันด้วย query `_prisma_migrations` ตรงๆ เพราะข้อความ CLI ตอนรันขึ้น "No pending migrations to apply" ทำให้ต้องเช็คซ้ำ) → **ขั้นตอนสำคัญที่พลาดไม่ได้: `run --rm seed`** เพื่อ populate `TemplateDefinition` 5 แถว (migration สร้างแค่ตารางเปล่า ถ้าข้ามขั้นนี้ไป การสร้างเอกสารใหม่ทุกประเภทจะถูกบล็อกทันทีด้วย error "ยังไม่มีเทมเพลตที่เปิดใช้งาน" ทั้งที่หน้าเว็บโหลดได้ปกติทุกหน้า) → `up -d --build app`
+- Image ที่ build ใหม่ (`edoc_management_project-app:latest`) reuse cache layer จาก build ของ `migrate`/`seed` ก่อนหน้าได้ถูกต้อง (share Dockerfile stage เดียวกัน เนื้อหาเหมือนกันจริง ไม่ใช่บั๊ก stale image)
+- **Verify จริงบน production:** `curl` ตรงด้วย HTTPS ล้มเหลว (`000`) เพราะ curl ปฏิเสธ self-signed cert ตามปกติ (ไม่ใช่บั๊ก) ใช้ `curl -k` แทนได้ `307` ปกติ — ที่สำคัญกว่านั้นคือ**ผู้ใช้ล็อกอินเข้า production จริงแล้วสร้างเอกสารทดสอบจริง 1 ฉบับสำเร็จ** พิสูจน์ว่า seed `TemplateDefinition` ใช้งานได้จริง ไม่ใช่แค่หน้าเว็บโหลดได้เฉยๆ
+- ระหว่างทางมีคำสั่ง rollback ที่เตรียมไว้เผื่อ (`docker tag edoc-app:known-good-<sha> ...`) ถูกรันไปโดยไม่ได้แทนที่ placeholder `<sha-from-earlier>` จริง — bash error ทันทีก่อนจะแตะ image ใดๆ (`docker tag` ไม่ทำงานเลย) ไม่กระทบ deploy ที่ verify ผ่านแล้ว ตรวจซ้ำด้วย `docker compose images app` ยืนยัน image ยังเป็นตัวที่เพิ่ง build ถูกต้อง
+- ปิดรายการนี้ได้เต็มรูปแล้ว — commit `72a5591` (Module 17 + document numbering) ใช้งานจริงบน production ครบทุกฟีเจอร์
 
 ### ยังไม่ได้ทำ (ต่อวันถัดไป)
-- [ ] **Deploy commit ล่าสุดของ `master` ขึ้น production** ตาม playbook `ubuntu-server-ops` (มี migration ใหม่ 2 ตัวต้อง apply ผ่าน service `migrate` ก่อน `up -d --build app`)
 - [ ] บั๊ก CSP บล็อก `eval()` บน dev server (ค้างมาตั้งแต่ 2026-07-13)
 - [ ] ตั้ง DHCP reservation ที่ router (ค้างมาตั้งแต่ 2026-07-06)
 - [ ] จำลองเครื่อง production เสียหายทั้งเครื่องแบบเต็มรูปแบบตาม runbook (ค้างมาตั้งแต่ 2026-07-11)
