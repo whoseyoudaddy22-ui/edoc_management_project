@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { DocumentHistoryTimeline } from "@/components/shared/document-history-timeline";
+import { DocumentApprovalActions } from "@/components/shared/document-approval-actions";
 import { formatFileSize } from "@/lib/upload";
 import { formatThaiDate, formatThaiDateTime } from "@/lib/format";
 import { PRIORITY_LABELS, TITLE_PREFIX_LABELS } from "@/lib/labels";
@@ -49,7 +50,15 @@ export type DocumentMetadata = {
   }[];
 };
 
-export function DocumentMetadataView({ document: doc }: { document: DocumentMetadata }) {
+export function DocumentMetadataView({
+  document: doc,
+  canApprove,
+  currentUserId,
+}: {
+  document: DocumentMetadata;
+  canApprove: boolean;
+  currentUserId: string;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -59,10 +68,19 @@ export function DocumentMetadataView({ document: doc }: { document: DocumentMeta
           </Button>
           <h1 className="text-xl font-semibold text-gray-900">รายละเอียดเอกสาร (Metadata)</h1>
         </div>
-        <Button nativeButton={false} render={<Link href={`/documents/${doc.id}/print`} />}>
-          <Printer className="h-4 w-4" />
-          พิมพ์เอกสาร
-        </Button>
+        <div className="flex items-center gap-3">
+          {canApprove && (
+            <DocumentApprovalActions
+              documentId={doc.id}
+              status={doc.status}
+              currentUserId={currentUserId}
+            />
+          )}
+          <Button nativeButton={false} render={<Link href={`/documents/${doc.id}/print`} />}>
+            <Printer className="h-4 w-4" />
+            พิมพ์เอกสาร
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="details">
