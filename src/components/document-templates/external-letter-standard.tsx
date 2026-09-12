@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { formatThaiDate } from "@/lib/format";
 import { CLOSING_TEXT_LABELS, PRIORITY_LABELS } from "@/lib/labels";
 import { PageFrame } from "./shared/page-frame";
@@ -10,7 +11,14 @@ export function ExternalLetterStandard({ document: doc }: TemplateProps) {
   return (
     <PageFrame paddingTop="2.5cm" paddingBottom="2cm">
       <header className="flex flex-col items-center text-center">
-        <p className="text-[18pt] font-bold">หนังสือราชการ</p>
+        <Image
+          src="/emblem/garuda.jpg"
+          alt="ตราครุฑ"
+          width={140}
+          height={150}
+          style={{ width: "1.4cm", height: "1.5cm" }}
+        />
+        <p className="mt-1 text-[18pt] font-bold">หนังสือราชการ</p>
         <p className="text-[18pt] font-bold">หน่วยงาน {doc.departmentCode}</p>
       </header>
 
