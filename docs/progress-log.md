@@ -174,3 +174,28 @@ Commit `bcb270f` — พบว่า runbook ทั้งไฟล์ยัง�
 - [ ] ~~จำลองเครื่อง production เสียหายทั้งเครื่องแบบเต็มรูปแบบตาม runbook~~ — runbook เขียนไว้ครบแล้วสำหรับอ้างอิง แต่ไม่จำเป็นต้องพิสูจน์จริงด้วยการทำลายเครื่องสำหรับขอบเขตนี้
 
 ระบบอยู่ในสถานะพร้อมส่งมอบ/สาธิตแล้ว ณ จุดนี้ (Module 17 + document numbering deploy บน production จริงสำเร็จ, security review ผ่าน, tests ผ่านครบ) — งานถัดไปของผู้ใช้คือทำรูปเล่มรายงานโครงงาน ไม่ใช่งานโค้ดต่อ
+
+## 2026-09-12 — ปิด scope 4 ข้อของโครงงาน (approve/reject + PDF export จริง) + เพิ่ม test coverage
+
+หลังจากบันทึกด้านบน (28 ก.ค.) มีงานเพิ่มเติมที่ยังไม่เคยบันทึกไว้ พบระหว่างตรวจสถานะโปรเจกต์กับ Claude Code รอบใหม่หลัง subscription ขาดช่วงไปพักหนึ่ง — ไล่ตรวจจาก `git log` จริง ไม่ใช่จากความจำ:
+
+- **commit `7199d21`** — เพิ่มปุ่ม อนุมัติ/ไม่อนุมัติ บนหน้ารายละเอียดเอกสาร (`DocumentApprovalActions`) — backend endpoint (`PUT /api/documents/[id]`) มีสิทธิ์ตรวจอยู่แล้วแต่ไม่เคยมี UI ให้กดจริง ปิด scope item "(1) ควบคุมสถานะเอกสาร" ที่ระบุไว้ใน `CLAUDE.md`
+- **commit `7c3c505`** — ปุ่ม "Export PDF" เดิม alias ไปที่ `window.print()` เฉยๆ ไม่เคยสร้างไฟล์ PDF จริงฝั่ง server เลย แก้เป็น render ผ่าน `puppeteer-core` จริง (`src/lib/pdf-generator.ts` + `GET /api/documents/[id]/export-pdf`) พร้อมแก้บั๊ก print CSS 2 จุดที่ไม่เคยเห็นตอนใช้ `window.print()` ปิด scope item "(3) แปลงข้อมูลเป็นไฟล์ PDF ตามมาตรฐานองค์กร"
+- ทั้งสอง merge เข้า `master` แล้ว (`3d0fd58`, `4cb5688`) แต่ **ไม่มี automated test เลยตอน merge** และ **ยังไม่เคย deploy ขึ้น production (`192.168.1.155`)** — production ตอนนี้ยังเป็นเวอร์ชันเก่ากว่า `master`
+
+**ปิดช่องว่าง test coverage วันนี้** (`tests/document-approval.test.ts`, `tests/document-export-pdf.test.ts`, commit `98780b8`):
+- approve/reject: ยืนยัน SARABAN/VIEWER ถูกปฏิเสธ (403) ตอนพยายามอนุมัติ, APPROVER/ADMIN อนุมัติ/ไม่อนุมัติได้จริง (200, มี `approvedById`/`approvedAt`), และ APPROVER ถูกปฏิเสธ (403) ถ้าพยายามแก้เนื้อหาเอกสารแทนที่จะแค่ตัดสิน
+- export-pdf: 401 ไม่ login, 404 เอกสารไม่มี/ถูก soft-delete, 200 พร้อม header/ชื่อไฟล์ถูกต้อง (sanitize `/` ในเลขที่เอกสารก่อนใส่ชื่อไฟล์), มี audit log `DOCUMENT_PRINT` — mock `@/lib/pdf-generator` แทนการเปิด Chromium จริงระหว่างเทส
+- ผลตรวจ: `npm run test` **103/103 → 113/113**, eslint สะอาด, `tsc --noEmit` มี error แบบเดิมที่มีอยู่แล้วในไฟล์ test อื่น (NextMiddleware type-inference บน mock `@/lib/auth`) ไม่ใช่ปัญหาใหม่
+
+**เจอระหว่างทาง (แก้แล้ว ไม่ใช่บั๊กแอป):** เขียน `afterAll` cleanup ของเทสใหม่ตอนแรกลืม `deleteAuditLogsForTest` ก่อนลบ user ชน FK ของ `AuditLog`, และ assertion แรกลืมว่า route sanitize เลขที่เอกสาร (`/` → `-`) ก่อนใส่ชื่อไฟล์ — แก้ทั้งสองจุดแล้วในโค้ด test เอง
+
+**ระหว่างทางคุยกันยังพบ:**
+- มี skill `.claude/skills/Intruder/SKILL.md` (red-team persona จำกัดเฉพาะ LAN ส่วนตัวของตัวเอง) ที่สร้างไว้ก่อนหน้าแต่ไม่เคย commit — ผู้ใช้จำไม่ได้ว่าตั้งใจสร้างมาทำไม ตอนนี้เก็บไว้ที่ branch `chore/add-intruder-skill` (commit `9167072`) รอตัดสินใจ ยังไม่ merge เข้า `master`
+- เพิ่ม `docs/reference/Document_Design_Specification_v2.md` + `template_หนังสือราชการ.docx` ต้นฉบับ (Gemini แปลงมาก่อนหน้านี้ ใช้เป็น spec เสริมคู่กับ `memo-template-phitsanulok.md` เดิม) — merge เข้า `master` แล้ว (`1cbeace`)
+
+### ยังไม่ได้ทำ (ต่อ)
+- [ ] รัน pre-merge checklist เต็มรูป (security-review) ให้ approve/reject + export-pdf ก่อนตัดสินใจ deploy ขึ้น production — **ตั้งใจทำแค่ dev local ไปก่อนตามคำขอผู้ใช้ ไม่ให้กระทบเว็บที่ทำงานอยู่จริงบน `.155`**
+- [ ] อัปเดต `docs/reference/report_project/draft/` บทที่ 5 (สรุปผล/อภิปรายผล/ข้อเสนอแนะ) ของรายงานโครงงาน — บทที่ 1-4 เสร็จแล้ว
+- [ ] ถ่ายภาพหน้าจอแอปจริงสำหรับรายงาน (4.1.2) — ตอนนี้ทำได้แล้วเพราะเว็บใช้งานได้จริงบน `.155`
+- [ ] ตัดสินใจเรื่อง skill `Intruder` (merge เข้า master หรือลบทิ้ง)
