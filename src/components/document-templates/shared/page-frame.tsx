@@ -22,7 +22,7 @@ export function PageFrame({
         paddingLeft: "3cm",
         paddingRight: "2cm",
         fontSize: "16pt",
-        lineHeight: 1.5,
+        lineHeight: 1.31,
       }}
     >
       {children}

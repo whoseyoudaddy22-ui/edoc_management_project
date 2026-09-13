@@ -21,11 +21,13 @@ const nextConfig: NextConfig = {
           // 'unsafe-inline' ใน script-src/style-src ยังจำเป็นเพราะยังไม่ได้ตั้ง nonce-based CSP
           // ผ่าน proxy.ts (Next.js hydration script + Tailwind บาง utility ต้องใช้ inline) — แผนถัดไป
           // ถ้าจะรัดกุมกว่านี้คือเปลี่ยนเป็น nonce แทน ไม่ใช่ปล่อย unsafe-inline ถาวร
+          // 'unsafe-eval' เพิ่มเฉพาะ dev (Next.js/React ต้องใช้ eval() สำหรับ Fast Refresh และสร้าง
+          // call stack ใหม่ตอน debug) — React ไม่ใช้ eval() ใน production เลย จึงไม่ต้องเปิดตอน build จริง
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""}`,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data:",
               "font-src 'self'",

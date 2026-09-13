@@ -4,29 +4,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ฟอนต์เอกสารราชการ (ดู .claude/skills/official-document-template) ห้ามพึ่งฟอนต์ที่ติดตั้งในเครื่องผู้ใช้เพียงอย่างเดียว */
+/* ฟอนต์เอกสารราชการ (ดู .claude/skills/official-document-template) ห้ามพึ่งฟอนต์ที่ติดตั้งในเครื่องผู้ใช้เพียงอย่างเดียว
+   ใช้ TH SarabunPSK ตัวเดียวกับที่ template_หนังสือราชการ.docx อ้างอิง (fontTable.xml) — ห้ามสลับเป็น
+   "TH Sarabun New" เพราะแม้ชื่อคล้ายกันแต่เป็นคนละไฟล์ คนละ capHeight/em ratio ทำให้ตัวอักษรขนาดเดียวกัน
+   (pt) แสดงผลใหญ่กว่าต้นฉบับ Word อย่างเห็นได้ชัด (วัดจาก OS/2 sCapHeight: New = 72.8% em, PSK = 47.6% em) */
 @font-face {
-  font-family: "TH Sarabun New";
+  font-family: "TH Sarabun PSK";
   src:
-    url("/fonts/THSarabunNew.woff") format("woff"),
-    url("/fonts/THSarabunNew.ttf") format("truetype");
+    url("/fonts/THSarabunPSK.woff") format("woff"),
+    url("/fonts/THSarabunPSK.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "TH Sarabun New";
+  font-family: "TH Sarabun PSK";
   src:
-    url("/fonts/THSarabunNew-Bold.woff") format("woff"),
-    url("/fonts/THSarabunNew-Bold.ttf") format("truetype");
+    url("/fonts/THSarabunPSK-Bold.woff") format("woff"),
+    url("/fonts/THSarabunPSK-Bold.ttf") format("truetype");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 .font-document {
-  font-family: "TH Sarabun New", "TH Sarabun PSK", sans-serif;
+  font-family: "TH Sarabun PSK", sans-serif;
 }
 
 @theme inline {
