@@ -11,24 +11,23 @@ import type { TemplateProps } from "./types";
 export function MemoStandardV1({ document: doc }: TemplateProps) {
   return (
     <PageFrame paddingTop="1.25cm" paddingBottom="0.5cm">
-      <header className="relative text-center">
+      <header className="relative flex items-center justify-center" style={{ minHeight: "1.5cm" }}>
         <Image
           src="/emblem/garuda.jpg"
           alt="ตราครุฑ"
           width={140}
           height={150}
-          className="absolute top-0 left-0"
-          style={{ width: "1.4cm", height: "1.5cm" }}
+          className="absolute left-0"
+          style={{ width: "1.36cm", height: "1.5cm", top: "50%", transform: "translateY(-50%)" }}
         />
         <p className="text-[29pt] font-bold">บันทึกข้อความ</p>
       </header>
-      <hr className="mt-1 mb-3 border-t-2 border-black" />
 
       <p className="text-[16pt]">
         <span className="text-[20pt] font-bold">ส่วนราชการ</span> {doc.departmentName}
       </p>
 
-      <div className="mt-3 flex items-baseline gap-10 text-[16pt]">
+      <div className="flex items-baseline gap-10 text-[16pt]">
         <p>
           <span className="text-[20pt] font-bold">ที่</span> {doc.documentNumber}
         </p>
@@ -37,15 +36,15 @@ export function MemoStandardV1({ document: doc }: TemplateProps) {
         </p>
       </div>
 
-      <p className="mt-4 text-[16pt]">
-        <span className="text-[20pt] font-bold">เรียน</span> {doc.recipient}
-      </p>
-
-      <p className="mt-4 border-l-4 border-blue-600 pl-3 text-[16pt] font-bold">
+      <p className="text-[16pt] font-bold">
         <span className="text-[20pt]">เรื่อง</span>: {doc.title}
       </p>
 
-      <div className="mt-4 text-[16pt]">
+      <p className="text-[16pt]" style={{ marginTop: "6pt" }}>
+        <span className="text-[20pt] font-bold">เรียน</span> {doc.recipient}
+      </p>
+
+      <div className="text-[16pt]" style={{ marginTop: "6pt" }}>
         {doc.referenceNumber && <p>อ้างถึง {doc.referenceNumber}</p>}
         <p className="whitespace-pre-wrap" style={{ textIndent: "2.5cm" }}>
           {doc.content}
